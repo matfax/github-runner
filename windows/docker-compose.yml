@@ -1,0 +1,16 @@
+services:
+  gh-runner:
+    image: ${RUNNER_IMAGE:-ghcr.io/matfax/github-runner/runner-windows:latest}
+    restart: "no" # container handles restarts internally; clean idle exit stops it
+    environment:
+      - CUSTOM_ACTIONS_RESULTS_URL=http://host.docker.internal:3000
+      - REPO_URL=${REPO_URL}
+      - REG_TOKEN=${REG_TOKEN}
+      - RUNNER_IDLE_TIMEOUT_MINUTES=${RUNNER_IDLE_TIMEOUT_MINUTES:-15}
+      - RUNNER_MAX_RESTARTS=${RUNNER_MAX_RESTARTS:-20}
+      - RUNNER_LABELS=${RUNNER_LABELS}
+    # Mount the host Docker socket so the runner can build containers too
+    volumes:
+      - type: npipe
+        source: \\.\pipe\docker_engine
+        target: \\.\pipe\docker_engine

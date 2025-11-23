@@ -1,0 +1,15 @@
+owner: ""            # optional GitHub owner filter (login)
+includeRepos: []     # optional explicit repos, e.g. ["user/repo1", "org/repo2"]
+excludeRepos: []     # optional exclusions
+pollSeconds: 30
+maxLaunchPerCycle: 2
+runnerIdleTimeoutMinutes: 15
+runnerMaxRestarts: 20
+requiredLabels:
+  - self-hosted
+  - orchestrated
+windowsLabelRegex: (?i)windows
+linuxLabelRegex: (?i)linux
+connectUrl: "http://localhost:8181"  # 1Password Connect API base URL (host port)
+connectToken: ""                     # Connect access token (keep secret)
+connectSecretRef: "op://<vault>/<item>/<field>"  # 1Password secret reference (vault/item/field)

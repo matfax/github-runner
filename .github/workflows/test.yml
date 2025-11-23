@@ -1,0 +1,117 @@
+name: Self-hosted Runner Test
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  release:
+    types: [ published ]
+  schedule:
+    - cron: "0 0 * * *"
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  RUNNER_IDLE_TIMEOUT_MINUTES: 5
+  RUNNER_MAX_RESTARTS: 1
+
+jobs:
+  registration-token:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    environment: registration
+    outputs:
+      reg_token: ${{ steps.token.outputs.reg_token }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create registration token
+        id: token
+        shell: bash
+        run: |
+          if [ -z "${{ secrets.REGISTRATION_PAT }}" ]; then
+            echo "REGISTRATION_PAT secret missing" >&2
+            exit 1
+          fi
+          token=$(pwsh -Command ". ./registration.ps1; New-RegistrationToken -PatToken '${{ secrets.REGISTRATION_PAT }}' -RepoFullName '${{ github.repository }}'")
+          echo "::add-mask::$token"
+          if [ -z "$token" ]; then
+            echo "Failed to create registration token" >&2
+            exit 1
+          fi
+          echo "reg_token=$token" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: registration-token
+    if: github.event_name != 'pull_request'
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - os: ubuntu-latest
+            name: linux
+            dockerfile: linux/Dockerfile
+            platform: linux
+            socket: "/var/run/docker.sock:/var/run/docker.sock"
+          - os: windows-latest
+            name: windows
+            dockerfile: windows/Dockerfile
+            platform: windows
+            socket: "\\\\.\\pipe\\docker_engine:\\\\.\\pipe\\docker_engine"
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Build image
+        shell: pwsh
+        run: |
+          docker build -f ${{ matrix.dockerfile }} -t "runner-${{ matrix.name }}-local" .
+
+      - name: Start runner via launch script
+        shell: pwsh
+        run: |
+          $regToken = "${{ needs.registration-token.outputs.reg_token }}"
+          if (-not $regToken) { throw "REG_TOKEN missing" }
+          . ./launch.ps1
+          $labels = "self-hosted,${{ matrix.platform }},docker,${{ github.sha }}"
+          $composeProject = "ci-${{ github.run_id }}-${{ matrix.name }}"
+          $repoObj = [pscustomobject]@{ full_name = "${{ github.repository }}"; html_url = "https://github.com/${{ github.repository }}" }
+          Start-Runner -Repo $repoObj -RegToken $regToken -ComposeProject $composeProject -Platform "${{ matrix.platform }}" -RunnerIdleTimeoutMinutes $env:RUNNER_IDLE_TIMEOUT_MINUTES -RunnerMaxRestarts $env:RUNNER_MAX_RESTARTS -RunnerLabels $labels -RunnerImage "runner-${{ matrix.name }}-local" -WithWsl:$false
+
+      - name: Wait for self-hosted jobs
+        uses: yogeshlonkar/wait-for-jobs@v0.4.9
+        with:
+          jobs: "selfhost"
+          ignore-skipped: 'false'
+          ttl: '5'
+
+      - name: Push image
+        if: github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'release'
+        shell: pwsh
+        run: |
+          tag="${{ github.event_name == 'release' && github.event.release.tag_name || 'latest' }}"
+          docker tag "runner-${{ matrix.name }}-local" "ghcr.io/${{ github.repository }}/runner-${{ matrix.name }}:$tag"
+          docker push "ghcr.io/${{ github.repository }}/runner-${{ matrix.name }}:$tag"
+
+
+  selfhost:
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - platform: linux
+          - platform: windows
+    runs-on:
+      - self-hosted
+      - ${{ matrix.platform }}
+      - ${{ github.sha }}
+    timeout-minutes: 5
+    steps:
+      - run: echo "Self-hosted runner alive on ${{ matrix.platform }}"
