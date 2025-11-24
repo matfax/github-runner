@@ -8,6 +8,19 @@ if [[ -z "${REPO_URL:-}" ]]; then
   exit 1
 fi
 
+# Cleanup function to deregister runner from GitHub
+cleanup_runner() {
+  if [[ -n "${PAT_TOKEN:-}" ]] && [[ -f .runner ]]; then
+    echo "🧹 Deregistering runner from GitHub..."
+    ./config.sh remove --token "${PAT_TOKEN}" || {
+      echo "⚠️ Failed to deregister runner, but continuing with exit."
+    }
+  fi
+}
+
+# Register cleanup to run on exit
+trap cleanup_runner EXIT
+
 if [[ ! -d .runner ]]; then
   if [[ -z "${REG_TOKEN:-}" ]]; then
     echo "REG_TOKEN env var is required for initial configuration."

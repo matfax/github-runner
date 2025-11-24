@@ -419,7 +419,7 @@ while ($true) {
                 }
             }
 
-            Start-Runner -Repo $Repo -RegToken $RegTokenForRepo -ComposeProject $ComposeProject -Platform $Platform.Name -RunnerIdleTimeoutMinutes $RunnerIdleTimeoutMinutes -RunnerMaxRestarts $RunnerMaxRestarts -RunnerLabels $Labels -WithWsl:$($Platform.WithWsl)
+            Start-Runner -Repo $Repo -RegToken $RegTokenForRepo -PatToken $PatToken -ComposeProject $ComposeProject -Platform $Platform.Name -RunnerIdleTimeoutMinutes $RunnerIdleTimeoutMinutes -RunnerMaxRestarts $RunnerMaxRestarts -RunnerLabels $Labels -WithWsl:$($Platform.WithWsl)
             $Launched++
         }
     }

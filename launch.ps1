@@ -70,6 +70,8 @@ function Start-Runner {
         [object]$Repo,
         [Parameter(Mandatory = $true)]
         [string]$RegToken,
+        [Parameter(Mandatory = $false)]
+        [string]$PatToken = "",
         [string]$ComposeProject,
         [Parameter(Mandatory = $true)]
         [ValidateSet("windows", "linux")]
@@ -97,6 +99,7 @@ function Start-Runner {
     $envVars = @{
         REPO_URL                    = $RepoUrl
         REG_TOKEN                   = $RegToken
+        PAT_TOKEN                   = $PatToken
         RUNNER_IDLE_TIMEOUT_MINUTES = $RunnerIdleTimeoutMinutes
         RUNNER_MAX_RESTARTS         = $RunnerMaxRestarts
         RUNNER_LABELS               = $RunnerLabels
