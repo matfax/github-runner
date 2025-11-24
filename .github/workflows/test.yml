@@ -139,31 +139,47 @@ jobs:
         shell: pwsh
         run: |
           $composeProject = "ci-${{ github.run_id }}-${{ matrix.name }}"
-          $container = "${composeProject}-github-runner-1"
           $deadline = (Get-Date).AddMinutes(2)
           $state = $null
+          $containerId = $null
+
+          function Get-ContainerId {
+              param([string]$Project)
+              $id = docker ps --filter "label=com.docker.compose.project=$Project" --format "{{.ID}}" | Select-Object -First 1
+              if (-not $id) {
+                  $id = docker ps -a --filter "label=com.docker.compose.project=$Project" --format "{{.ID}}" | Select-Object -First 1
+              }
+              return $id
+          }
+
           while ((Get-Date) -lt $deadline) {
-              $inspect = docker inspect $container 2>$null
+              $containerId = Get-ContainerId -Project $composeProject
+              if (-not $containerId) {
+                  Start-Sleep -Seconds 5
+                  continue
+              }
+
+              $inspect = docker inspect $containerId 2>$null
               if ($LASTEXITCODE -ne 0 -or -not $inspect) {
                   Start-Sleep -Seconds 5
                   continue
               }
-              $state = ($inspect | Select-Object -First 1).State
+              $state = (ConvertFrom-Json $inspect)[0].State
               if ($state.Running) {
-                  Write-Host "✅ Runner container '$container' is running."
+                  Write-Host "✅ Runner container '$containerId' is running."
                   break
               }
               if ($state.Status -eq "exited") {
                   Write-Host "ℹ️ Container exited early. State: $(ConvertTo-Json $state -Compress)"
-                  docker logs $container
+                  docker logs $containerId
                   throw "Runner container exited with code $($state.ExitCode)."
               }
               Start-Sleep -Seconds 5
           }
           if (-not $state -or -not $state.Running) {
               if ($state) { Write-Host "ℹ️ Final container state: $(ConvertTo-Json $state -Compress)" }
-              docker logs $container
-              throw "Runner container '$container' did not reach running state before timeout."
+              if ($containerId) { docker logs $containerId }
+              throw "Runner container for project '$composeProject' did not reach running state before timeout."
           }
 
       - name: Wait for self-hosted jobs
