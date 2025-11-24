@@ -148,18 +148,20 @@ jobs:
                   Start-Sleep -Seconds 5
                   continue
               }
-              $state = (ConvertFrom-Json $inspect)[0].State
+              $state = ($inspect | Select-Object -First 1).State
               if ($state.Running) {
                   Write-Host "✅ Runner container '$container' is running."
                   break
               }
               if ($state.Status -eq "exited") {
+                  Write-Host "ℹ️ Container exited early. State: $(ConvertTo-Json $state -Compress)"
                   docker logs $container
                   throw "Runner container exited with code $($state.ExitCode)."
               }
               Start-Sleep -Seconds 5
           }
           if (-not $state -or -not $state.Running) {
+              if ($state) { Write-Host "ℹ️ Final container state: $(ConvertTo-Json $state -Compress)" }
               docker logs $container
               throw "Runner container '$container' did not reach running state before timeout."
           }
