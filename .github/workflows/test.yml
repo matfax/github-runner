@@ -109,7 +109,7 @@ jobs:
       - name: Wait for self-hosted jobs
         uses: yogeshlonkar/wait-for-jobs@v0.4.9
         with:
-          jobs: "selfhost (${{ matrix.platform }})"
+          jobs: "Test Runner Integration (${{ matrix.platform }})"
           ignore-skipped: 'false'
           ttl: '5'
 
