@@ -179,3 +179,13 @@ jobs:
     timeout-minutes: 5
     steps:
       - run: echo "Self-hosted runner alive on ${{ matrix.platform }}"
+
+  completion:
+    name: Completion
+    needs: [build, selfhost]
+    runs-on: ubuntu-latest
+    environment: completion
+    permissions:
+      contents: read
+    steps:
+      - run: echo "Build and test completed successfully"
