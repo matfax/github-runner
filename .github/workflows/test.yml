@@ -9,9 +9,9 @@ on:
   schedule:
     - cron: "0 0 * * *"
 
-permissions:
-  contents: read
-  packages: write
+concurrency: 
+  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.ref }}
 
 env:
   RUNNER_IDLE_TIMEOUT_MINUTES: 5
@@ -22,6 +22,8 @@ jobs:
     name: Create Registration Token
     runs-on: ubuntu-latest
     environment: registration
+    permissions:
+      contents: read
     outputs:
       reg_token: ${{ steps.encoded-reg-token.outputs.out }}
     steps:
@@ -53,6 +55,9 @@ jobs:
   build:
     name: Build and Launch Runners
     needs: registration-token
+    permissions:
+      contents: read
+      packages: write
     strategy:
       fail-fast: true
       matrix:
@@ -96,7 +101,7 @@ jobs:
           $regToken = "${{ steps.decoded-reg-token.outputs.out }}"
           if (-not $regToken) { throw "REG_TOKEN missing" }
           . ./launch.ps1
-          $labels = "self-hosted,${{ matrix.platform }},docker,${{ github.sha }}"
+          $labels = "self-hosted,${{ matrix.platform }},docker,run-${{ github.run_id }}"
           $composeProject = "ci-${{ github.run_id }}-${{ matrix.name }}"
           $repoObj = [pscustomobject]@{ full_name = "${{ github.repository }}"; html_url = "https://github.com/${{ github.repository }}" }
           Start-Runner -Repo $repoObj -RegToken $regToken -ComposeProject $composeProject -Platform "${{ matrix.platform }}" -RunnerIdleTimeoutMinutes $env:RUNNER_IDLE_TIMEOUT_MINUTES -RunnerMaxRestarts $env:RUNNER_MAX_RESTARTS -RunnerLabels $labels -RunnerImage "runner-${{ matrix.name }}-local" -WithWsl:$false
@@ -119,8 +124,9 @@ jobs:
   selfhost:
     name: Test Runner Integration
     needs: registration-token
+    permissions:
+      contents: none
     strategy:
-      fail-fast: true
       matrix:
         include:
           - platform: linux
@@ -128,7 +134,7 @@ jobs:
     runs-on:
       - self-hosted
       - ${{ matrix.platform }}
-      - ${{ github.sha }}
+      - run-${{ github.run_id }}
     timeout-minutes: 5
     steps:
       - run: echo "Self-hosted runner alive on ${{ matrix.platform }}"
