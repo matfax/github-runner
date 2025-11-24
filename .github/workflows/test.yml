@@ -121,6 +121,17 @@ jobs:
           docker tag "runner-${{ matrix.name }}-local" "ghcr.io/${{ github.repository }}/runner-${{ matrix.name }}:$tag"
           docker push "ghcr.io/${{ github.repository }}/runner-${{ matrix.name }}:$tag"
 
+  cancel-on-failure:
+    name: Cancel Workflow on Build Failure
+    needs: build
+    if: failure()
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: Cancel workflow
+        uses: action-pack/cancel@v1
+
   selfhost:
     name: Test Runner Integration
     needs: registration-token
