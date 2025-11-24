@@ -1,0 +1,12 @@
+{
+  "extends": [
+    "config:best-practices",
+    "group:allDigest",
+    "mergeConfidence:all-badges",
+    ":automergePr",
+    ":approveMajorUpdates",
+    ":automergeTesters",
+    ":enableVulnerabilityAlertsWithAdditionalLabel(security)",
+    ":gitSignOff"
+  ]
+}
