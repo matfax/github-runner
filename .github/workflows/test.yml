@@ -112,7 +112,7 @@ jobs:
         if: github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'release'
         shell: pwsh
         run: |
-          tag="${{ github.event_name == 'release' && github.event.release.tag_name || 'latest' }}"
+          $tag = "${{ github.event_name == 'release' && github.event.release.tag_name || 'latest' }}"
           docker tag "runner-${{ matrix.name }}-local" "ghcr.io/${{ github.repository }}/runner-${{ matrix.name }}:$tag"
           docker push "ghcr.io/${{ github.repository }}/runner-${{ matrix.name }}:$tag"
 
