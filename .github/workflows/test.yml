@@ -111,7 +111,7 @@ jobs:
         with:
           jobs: "Test Runner Integration (${{ matrix.platform }})"
           ignore-skipped: 'false'
-          ttl: '5'
+          ttl: '2'
 
       - name: Push image
         if: github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'release'
@@ -124,6 +124,7 @@ jobs:
   selfhost:
     name: Test Runner Integration
     needs: registration-token
+    environment: testing
     permissions:
       contents: none
     strategy:
@@ -135,6 +136,6 @@ jobs:
       - self-hosted
       - ${{ matrix.platform }}
       - run-${{ github.run_id }}
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - run: echo "Self-hosted runner alive on ${{ matrix.platform }}"
