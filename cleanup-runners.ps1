@@ -1,5 +1,3 @@
-. "$PSScriptRoot/runner-api.ps1"
-
 param (
     [Parameter(Mandatory = $true)]
     [string]$RepoFullName = $env:GITHUB_REPOSITORY,
@@ -7,6 +5,8 @@ param (
     [string]$PatToken = $env:PAT_TOKEN,
     [string[]]$RunnerNames = @()
 )
+
+. "$PSScriptRoot/runner-api.ps1"
 
 $ErrorActionPreference = "Stop"
 
