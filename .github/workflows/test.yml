@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: registration
     outputs:
-      reg_token: ${{ steps.token.outputs.reg_token }}
+      reg_token: ${{ steps.encoded-reg-token.outputs.out }}
     steps:
       - uses: actions/checkout@v4
       - name: Create registration token
@@ -41,6 +41,14 @@ jobs:
             exit 1
           fi
           echo "reg_token=$token" >> "$GITHUB_OUTPUT"
+
+      - name: Encode registration token
+        id: encoded-reg-token
+        uses: cloudposse/github-action-secret-outputs@main
+        with:
+          secret: ${{ secrets.SYM_ENC }}
+          op: encode
+          in: ${{ steps.token.outputs.reg_token }}
 
   build:
     needs: registration-token
@@ -74,10 +82,18 @@ jobs:
         run: |
           docker build -f ${{ matrix.dockerfile }} -t "runner-${{ matrix.name }}-local" .
 
+      - name: Decode registration token
+        id: decoded-reg-token
+        uses: cloudposse/github-action-secret-outputs@main
+        with:
+          secret: ${{ secrets.SYM_ENC }}
+          op: decode
+          in: ${{ needs.registration-token.outputs.reg_token }}
+
       - name: Start runner via launch script
         shell: pwsh
         run: |
-          $regToken = "${{ needs.registration-token.outputs.reg_token }}"
+          $regToken = "${{ steps.decoded-reg-token.outputs.out }}"
           if (-not $regToken) { throw "REG_TOKEN missing" }
           . ./launch.ps1
           $labels = "self-hosted,${{ matrix.platform }},docker,${{ github.sha }}"
