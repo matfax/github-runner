@@ -102,6 +102,7 @@ jobs:
 
 
   selfhost:
+    needs: registration-token
     strategy:
       fail-fast: true
       matrix:
