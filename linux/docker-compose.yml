@@ -1,5 +1,5 @@
 services:
-  linux-runner:
+  github-runner:
     image: ${RUNNER_IMAGE:-ghcr.io/matfax/github-runner/runner-linux:latest}
     restart: "no"
     environment:

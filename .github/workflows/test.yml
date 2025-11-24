@@ -135,6 +135,35 @@ jobs:
           $repoObj = [pscustomobject]@{ full_name = "${{ github.repository }}"; html_url = "https://github.com/${{ github.repository }}" }
           Start-Runner -Repo $repoObj -RegToken $regToken -ComposeProject $composeProject -Platform "${{ matrix.platform }}" -RunnerIdleTimeoutMinutes $env:RUNNER_IDLE_TIMEOUT_MINUTES -RunnerMaxRestarts $env:RUNNER_MAX_RESTARTS -RunnerLabels $labels -RunnerImage "runner-${{ matrix.name }}-local" -RunnerName $composeProject -WithWsl:$false
 
+      - name: Ensure runner container is running
+        shell: pwsh
+        run: |
+          $composeProject = "ci-${{ github.run_id }}-${{ matrix.name }}"
+          $container = "${composeProject}-github-runner-1"
+          $deadline = (Get-Date).AddMinutes(2)
+          $state = $null
+          while ((Get-Date) -lt $deadline) {
+              $inspect = docker inspect $container 2>$null
+              if ($LASTEXITCODE -ne 0 -or -not $inspect) {
+                  Start-Sleep -Seconds 5
+                  continue
+              }
+              $state = (ConvertFrom-Json $inspect)[0].State
+              if ($state.Running) {
+                  Write-Host "✅ Runner container '$container' is running."
+                  break
+              }
+              if ($state.Status -eq "exited") {
+                  docker logs $container
+                  throw "Runner container exited with code $($state.ExitCode)."
+              }
+              Start-Sleep -Seconds 5
+          }
+          if (-not $state -or -not $state.Running) {
+              docker logs $container
+              throw "Runner container '$container' did not reach running state before timeout."
+          }
+
       - name: Wait for self-hosted jobs
         uses: yogeshlonkar/wait-for-jobs@v0.4.9
         with:

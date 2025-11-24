@@ -26,6 +26,11 @@ if (-not $RunnerConfigured) {
 
     Write-Host "⚙️ Configuring Runner: $RunnerName (initial)"
     ./config.cmd --url $RepoUrl --token $RegToken --name $RunnerName --unattended --work _work --labels $LabelsEnv --replace
+    $configExit = $LASTEXITCODE
+    if ($configExit -ne 0) {
+        Write-Error "Runner configuration failed (exit code $configExit)."
+        exit $configExit
+    }
     $env:REG_TOKEN = $null
 } else {
     Write-Host "ℹ️ Runner already configured. Skipping configuration."

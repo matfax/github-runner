@@ -1,5 +1,5 @@
 services:
-  gh-runner:
+  github-runner:
     image: ${RUNNER_IMAGE:-ghcr.io/matfax/github-runner/runner-windows:latest}
     restart: "no" # container handles restarts internally; clean idle exit stops it
     environment:
