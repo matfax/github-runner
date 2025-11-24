@@ -27,7 +27,7 @@ RUN choco install git -y --params '/GitAndUnixToolsOnPath'; `
     choco install openjdk17 -y
 
 # Compression tools
-RUN choco install zstd -y
+RUN choco install zstandard -y
 
 # Install Rustup specifically (The toolchain manager)
 RUN choco install rustup.install -y
