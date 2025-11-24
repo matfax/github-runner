@@ -3,7 +3,8 @@ param (
     [string]$RegToken = $env:REG_TOKEN,
     [int]$IdleTimeoutMinutes = $(if ($env:RUNNER_IDLE_TIMEOUT_MINUTES) { [int]$env:RUNNER_IDLE_TIMEOUT_MINUTES } else { 15 }),
     [int]$MaxRestarts = $(if ($env:RUNNER_MAX_RESTARTS) { [int]$env:RUNNER_MAX_RESTARTS } else { 20 }),
-    [string]$LabelsEnv = $(if ($env:RUNNER_LABELS) { $env:RUNNER_LABELS } else { "windows,docker,server-core" })
+    [string]$LabelsEnv = $(if ($env:RUNNER_LABELS) { $env:RUNNER_LABELS } else { "windows,docker,server-core" }),
+    [string]$RunnerName = $(if ($env:RUNNER_NAME) { $env:RUNNER_NAME } else { "" })
 )
 
 # Validation
@@ -13,7 +14,7 @@ if (-not $RepoUrl) {
 }
 
 $ErrorActionPreference = "Stop"
-$RunnerName = "win-" + $env:COMPUTERNAME
+$RunnerName = $(if ($RunnerName) { $RunnerName } else { "win-" + $env:COMPUTERNAME })
 $RunnerConfigured = Test-Path ".\\.runner"
 
 # 1. Configure only if not already registered (non-ephemeral)
@@ -24,7 +25,7 @@ if (-not $RunnerConfigured) {
     }
 
     Write-Host "⚙️ Configuring Runner: $RunnerName (initial)"
-    ./config.cmd --url $RepoUrl --token $RegToken --name $RunnerName --unattended --work _work --labels $LabelsEnv
+    ./config.cmd --url $RepoUrl --token $RegToken --name $RunnerName --unattended --work _work --labels $LabelsEnv --replace
     $env:REG_TOKEN = $null
 } else {
     Write-Host "ℹ️ Runner already configured. Skipping configuration."

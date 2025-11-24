@@ -9,6 +9,7 @@ services:
       - RUNNER_IDLE_TIMEOUT_MINUTES=${RUNNER_IDLE_TIMEOUT_MINUTES:-15}
       - RUNNER_MAX_RESTARTS=${RUNNER_MAX_RESTARTS:-20}
       - RUNNER_LABELS=${RUNNER_LABELS}
+      - RUNNER_NAME=${RUNNER_NAME}
     # Mount the host Docker socket so the runner can build containers too
     volumes:
       - type: npipe

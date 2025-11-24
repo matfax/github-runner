@@ -78,6 +78,7 @@ function Start-Runner {
         [int]$RunnerMaxRestarts = 20,
         [string]$RunnerLabels = "",
         [string]$RunnerImage = "",
+        [string]$RunnerName = "",
         [bool]$WithWsl = $false
     )
 
@@ -90,6 +91,7 @@ function Start-Runner {
     $Context = Get-LaunchContext -Repo $Repo -ComposeProject $ComposeProject
     $ComposeProject = $Context.ComposeProject
     $RepoUrl = $Context.RepoUrl
+    if (-not $RunnerName) { $RunnerName = $ComposeProject }
 
     $ComposePath = Join-Path $PSScriptRoot "$Platform/docker-compose.yml"
     $UseWsl = ($Platform -eq "linux") -and $WithWsl
@@ -101,6 +103,7 @@ function Start-Runner {
         RUNNER_MAX_RESTARTS         = $RunnerMaxRestarts
         RUNNER_LABELS               = $RunnerLabels
     }
+    if ($RunnerName) { $envVars["RUNNER_NAME"] = $RunnerName }
     if ($RunnerImage) { $envVars["RUNNER_IMAGE"] = $RunnerImage }
 
     Write-Host "🚀 Launching $Platform runner stack (project $ComposeProject)..." -ForegroundColor Green

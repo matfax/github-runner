@@ -6,6 +6,7 @@ $ErrorActionPreference = "Stop"
 
 . "$PSScriptRoot/launch.ps1"
 . "$PSScriptRoot/registration.ps1"
+. "$PSScriptRoot/runner-api.ps1"
 
 function Parse-OpSecretRef {
     param ([string]$SecretRef)
@@ -120,19 +121,6 @@ function Coerce-Array {
     return @($Value | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
 }
 
-function New-GitHubHeaders {
-    param (
-        [string]$PatToken
-    )
-
-    return @{
-        "Authorization"        = "Bearer $PatToken"
-        "Accept"               = "application/vnd.github+json"
-        "X-GitHub-Api-Version" = "2022-11-28"
-        "User-Agent"           = "gh-runner-auto-launch"
-    }
-}
-
 function Get-AdminRepos {
     param (
         [hashtable]$Headers
@@ -233,6 +221,51 @@ function HasActiveRunnerLinux {
     return -not [string]::IsNullOrWhiteSpace(($Containers | Select-Object -First 1))
 }
 
+function Remove-StaleRunners {
+    param (
+        [hashtable]$Headers,
+        [ref]$LaunchRegistry,
+        [int]$IdleTimeoutMinutes,
+        [int]$CleanupGraceMinutes = 10
+    )
+
+    $Now = Get-Date
+    $Keys = @($LaunchRegistry.Value.Keys)
+    foreach ($Key in $Keys) {
+        $Entry = $LaunchRegistry.Value[$Key]
+        if (-not $Entry) { continue }
+
+        $ComposeProject = $Key
+        $Platform = $Entry.Platform
+        $IsActive = $false
+        if ($Platform -eq "linux") {
+            $IsActive = HasActiveRunnerLinux -ComposeProject $ComposeProject
+        } else {
+            $IsActive = HasActiveRunner -ComposeProject $ComposeProject
+        }
+        if ($IsActive) { continue }
+
+        $AgeMinutes = ($Now - $Entry.LaunchedAt).TotalMinutes
+        if ($AgeMinutes -lt ($IdleTimeoutMinutes + $CleanupGraceMinutes)) { continue }
+
+        $Removed = $false
+        try {
+            $Removed = Remove-RunnerByName -Headers $Headers -RepoFullName $Entry.RepoFullName -RunnerName $Entry.RunnerName
+        } catch {
+            Write-Warning "Failed to delete stale runner '$($Entry.RunnerName)' from $($Entry.RepoFullName): $($_.Exception.Message)"
+        }
+
+        if (-not $Removed) {
+            Write-Host "ℹ️ Runner '$($Entry.RunnerName)' not found in $($Entry.RepoFullName); removing from registry." -ForegroundColor Gray
+            $null = $LaunchRegistry.Value.Remove($Key)
+            continue
+        }
+
+        Write-Host "🧹 Removed stale runner '$($Entry.RunnerName)' (project $ComposeProject)." -ForegroundColor Yellow
+        $null = $LaunchRegistry.Value.Remove($Key)
+    }
+}
+
 function Resolve-ConnectIds {
     param (
         [Parameter(Mandatory = $true)]
@@ -321,6 +354,7 @@ $RunnerMaxRestarts = if ($Config.runnerMaxRestarts) { [int]$Config.runnerMaxRest
 $ConnectUrl = $Config.connectUrl
 $ConnectToken = $Config.connectToken
 $ConnectSecretRef = $Config.connectSecretRef
+$RunnerCleanupGraceMinutes = 10
 
 if ([string]::IsNullOrWhiteSpace($ConnectUrl) -or
     [string]::IsNullOrWhiteSpace($ConnectToken) -or
@@ -329,6 +363,7 @@ if ([string]::IsNullOrWhiteSpace($ConnectUrl) -or
 }
 
 $SeenRunIds = @{}
+$LaunchRegistry = @{}
 
 Write-Host "👀 Watching for queued self-hosted jobs across repos you administer..." -ForegroundColor Cyan
 
@@ -409,6 +444,7 @@ while ($true) {
             Write-Host $Platform.LaunchMessage -ForegroundColor Green
             $SeenRunIds[$Queued.RunId] = Get-Date
             $Labels = ($Queued.Labels -join ',')
+            $RunnerName = "$ComposeProject"
 
             if (-not $RegTokenForRepo) {
                 try {
@@ -419,11 +455,22 @@ while ($true) {
                 }
             }
 
-            Start-Runner -Repo $Repo -RegToken $RegTokenForRepo -ComposeProject $ComposeProject -Platform $Platform.Name -RunnerIdleTimeoutMinutes $RunnerIdleTimeoutMinutes -RunnerMaxRestarts $RunnerMaxRestarts -RunnerLabels $Labels -WithWsl:$($Platform.WithWsl)
+            Start-Runner -Repo $Repo -RegToken $RegTokenForRepo -ComposeProject $ComposeProject -Platform $Platform.Name -RunnerIdleTimeoutMinutes $RunnerIdleTimeoutMinutes -RunnerMaxRestarts $RunnerMaxRestarts -RunnerLabels $Labels -RunnerName $RunnerName -WithWsl:$($Platform.WithWsl)
+            $LaunchRegistry[$ComposeProject] = [pscustomobject]@{
+                RepoFullName = $Repo.full_name
+                RunnerName   = $RunnerName
+                Platform     = $Platform.Name
+                LaunchedAt   = Get-Date
+            }
             $Launched++
         }
     }
 
+    try {
+        Remove-StaleRunners -Headers $Headers -LaunchRegistry ([ref]$LaunchRegistry) -IdleTimeoutMinutes $RunnerIdleTimeoutMinutes -CleanupGraceMinutes $RunnerCleanupGraceMinutes
+    } catch {
+        Write-Warning "Failed stale-runner cleanup: $($_.Exception.Message)"
+    }
     $PatToken = $null
     $Headers = $null
     Start-Sleep -Seconds $PollSeconds
