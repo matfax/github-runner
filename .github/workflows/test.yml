@@ -19,7 +19,7 @@ env:
 
 jobs:
   registration-token:
-    if: github.event_name != 'pull_request'
+    name: Create Registration Token
     runs-on: ubuntu-latest
     environment: registration
     outputs:
@@ -51,8 +51,8 @@ jobs:
           in: ${{ steps.token.outputs.reg_token }}
 
   build:
+    name: Build and Launch Runners
     needs: registration-token
-    if: github.event_name != 'pull_request'
     strategy:
       fail-fast: true
       matrix:
@@ -116,8 +116,8 @@ jobs:
           docker tag "runner-${{ matrix.name }}-local" "ghcr.io/${{ github.repository }}/runner-${{ matrix.name }}:$tag"
           docker push "ghcr.io/${{ github.repository }}/runner-${{ matrix.name }}:$tag"
 
-
   selfhost:
+    name: Test Runner Integration
     needs: registration-token
     strategy:
       fail-fast: true
