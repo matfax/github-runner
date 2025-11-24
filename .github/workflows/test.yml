@@ -159,12 +159,12 @@ jobs:
                   continue
               }
 
-              $inspect = docker inspect $containerId 2>$null
-              if ($LASTEXITCODE -ne 0 -or -not $inspect) {
+              $stateJson = docker inspect --format "{{json .State}}" $containerId 2>$null
+              if ($LASTEXITCODE -ne 0 -or -not $stateJson) {
                   Start-Sleep -Seconds 5
                   continue
               }
-              $state = (ConvertFrom-Json $inspect)[0].State
+              $state = $stateJson | ConvertFrom-Json
               if ($state.Running) {
                   Write-Host "✅ Runner container '$containerId' is running."
                   break
