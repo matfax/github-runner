@@ -1,5 +1,12 @@
 # Linux GitHub Actions runner image based on falcondev-oss/actions-runner, with toolchains aligned to the Windows image.
-FROM ghcr.io/falcondev-oss/actions-runner:latest
+FROM ghcr.io/falcondev-oss/actions-runner:2.329.0
+
+LABEL org.opencontainers.image.source="https://github.com/matfax/github-runner"
+LABEL org.opencontainers.image.vendor="matfax"
+LABEL org.opencontainers.image.licenses="Apache-2.0"
+LABEL org.opencontainers.image.title="GitHub Actions Runner"
+LABEL org.opencontainers.image.description="Ubuntu Community Runner for GitHub Actions"
+LABEL org.opencontainers.image.base.name="ghcr.io/falcondev-oss/actions-runner:2.329.0"
 
 ENV DEBIAN_FRONTEND=noninteractive
 

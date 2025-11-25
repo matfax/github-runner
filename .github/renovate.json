@@ -8,5 +8,57 @@
     ":automergeTesters",
     ":enableVulnerabilityAlertsWithAdditionalLabel(security)",
     ":gitSignOff"
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "managerFilePatterns": [
+        "windows/Dockerfile"
+      ],
+      "matchStrings": [
+        "choco install (?<depName>\\S+)[^\\r\\n]*?(--?\\w+[^\\r\\n]+)*--version[= ](?<currentValue>\\S+)"
+      ],
+      "datasourceTemplate": "nuget",
+      "versioningTemplate": "nuget",
+      "registryUrlTemplate": "https://community.chocolatey.org/api/v2/"
+    },
+    {
+      "customType": "regex",
+      "description": "Update OCI base image label alongside FROM",
+      "managerFilePatterns": [
+        "(^|/)Dockerfile$"
+      ],
+      "matchStrings": [
+        "org\\.opencontainers\\.image\\.base\\.name=\"(?<depName>[\\w./-]+):(?<currentValue>[\\w.-]+)\""
+      ],
+      "datasourceTemplate": "docker",
+      "versioningTemplate": "docker"
+    },
+    {
+      "customType": "regex",
+      "description": "Update Chocolatey MSI version in Windows Dockerfile",
+      "managerFilePatterns": [
+        "windows/Dockerfile"
+      ],
+      "matchStrings": [
+        "ARG CHOCO_VERSION=(?<currentValue>[\\w\\.-]+)"
+      ],
+      "depNameTemplate": "chocolatey/choco",
+      "datasourceTemplate": "github-releases",
+      "versioningTemplate": "semver"
+    },
+    {
+      "customType": "regex",
+      "description": "Update GitHub Actions runner version in Windows Dockerfile",
+      "managerFilePatterns": [
+        "windows/Dockerfile"
+      ],
+      "matchStrings": [
+        "ARG RUNNER_VERSION=(?<currentValue>[\\w\\.-]+)"
+      ],
+      "depNameTemplate": "falcondev-oss/github-actions-runner",
+      "datasourceTemplate": "github-releases",
+      "versioningTemplate": "semver"
+    }
   ]
 }
