@@ -119,7 +119,6 @@ jobs:
           tags: ${{ env.TEST_TAG }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          platforms: ${{ env.PLATFORMS }}
 
       - name: Decode registration token
         id: decoded-reg-token
