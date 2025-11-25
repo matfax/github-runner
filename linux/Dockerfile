@@ -54,7 +54,7 @@ RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --profile minimal && \
 ENV PATH="/home/runner/.cargo/bin:${PATH}"
 
 USER root
-COPY linux/start.sh /entrypoint.sh
+COPY start.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh && chown runner:runner /entrypoint.sh
 
 USER runner
