@@ -77,16 +77,16 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            name: linux
-            dockerfile: linux/Dockerfile
             platform: linux
             socket: "/var/run/docker.sock:/var/run/docker.sock"
           - os: windows-latest
-            name: windows
-            dockerfile: windows/Dockerfile
             platform: windows
             socket: "\\\\.\\pipe\\docker_engine:\\\\.\\pipe\\docker_engine"
     runs-on: ${{ matrix.os }}
+    env:
+      DOCKER_TAG: ${{ github.event_name == 'release' && github.event.release.tag_name || 'latest' }}
+      TEST_TAG: runner-${{ matrix.platform }}-local
+      TEST_PROJECT: ${{ github.run_id }}-${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v4
       - name: Login to GHCR
@@ -96,10 +96,17 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ github.token }}
 
-      - name: Build image
-        shell: pwsh
-        run: |
-          docker build -f ${{ matrix.dockerfile }} -t "runner-${{ matrix.name }}-local" .
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Build and export to Docker
+        uses: docker/build-push-action@v6
+        with:
+          load: true
+          context: ${{ matrix.platform }}
+          tags: ${{ env.TEST_TAG }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Decode registration token
         id: decoded-reg-token
@@ -131,14 +138,12 @@ jobs:
           if (-not $regToken) { throw "REG_TOKEN missing" }
           . ./launch.ps1
           $labels = "self-hosted,${{ matrix.platform }},docker,run-${{ github.run_id }}"
-          $composeProject = "ci-${{ github.run_id }}-${{ matrix.name }}"
           $repoObj = [pscustomobject]@{ full_name = "${{ github.repository }}"; html_url = "https://github.com/${{ github.repository }}" }
-          Start-Runner -Repo $repoObj -RegToken $regToken -ComposeProject $composeProject -Platform "${{ matrix.platform }}" -RunnerIdleTimeoutMinutes $env:RUNNER_IDLE_TIMEOUT_MINUTES -RunnerMaxRestarts $env:RUNNER_MAX_RESTARTS -RunnerLabels $labels -RunnerImage "runner-${{ matrix.name }}-local" -RunnerName $composeProject -WithWsl:$false
+          Start-Runner -Repo $repoObj -RegToken $regToken -ComposeProject "${{ env.TEST_PROJECT }}" -Platform "${{ matrix.platform }}" -RunnerIdleTimeoutMinutes $env:RUNNER_IDLE_TIMEOUT_MINUTES -RunnerMaxRestarts $env:RUNNER_MAX_RESTARTS -RunnerLabels $labels -RunnerImage "${{ env.TEST_TAG }}" -RunnerName "${{ env.TEST_PROJECT }}" -WithWsl:$false
 
       - name: Ensure runner container is running
         shell: pwsh
         run: |
-          $composeProject = "ci-${{ github.run_id }}-${{ matrix.name }}"
           $deadline = (Get-Date).AddMinutes(2)
           $state = $null
           $containerId = $null
@@ -153,7 +158,7 @@ jobs:
           }
 
           while ((Get-Date) -lt $deadline) {
-              $containerId = Get-ContainerId -Project $composeProject
+              $containerId = Get-ContainerId -Project "${{ env.TEST_PROJECT }}"
               if (-not $containerId) {
                   Start-Sleep -Seconds 5
                   continue
@@ -179,13 +184,12 @@ jobs:
           if (-not $state -or -not $state.Running) {
               if ($state) { Write-Host "ℹ️ Final container state: $(ConvertTo-Json $state -Compress)" }
               if ($containerId) { docker logs $containerId }
-              throw "Runner container for project '$composeProject' did not reach running state before timeout."
+              throw "Runner container for project '${{ env.TEST_PROJECT }}' did not reach running state before timeout."
           }
 
       - name: Check runner logs for readiness
         shell: pwsh
         run: |
-          $composeProject = "ci-${{ github.run_id }}-${{ matrix.name }}"
           function Get-ContainerId {
               param([string]$Project)
               $id = docker ps --filter "label=com.docker.compose.project=$Project" --format "{{.ID}}" | Select-Object -First 1
@@ -195,8 +199,8 @@ jobs:
               return $id
           }
 
-          $containerId = Get-ContainerId -Project $composeProject
-          if (-not $containerId) { throw "No container found for project '$composeProject'." }
+          $containerId = Get-ContainerId -Project "${{ env.TEST_PROJECT }}"
+          if (-not $containerId) { throw "No container found for project '${{ env.TEST_PROJECT }}'." }
 
           $deadline = (Get-Date).AddMinutes(2)
           $ready = $false
@@ -220,20 +224,21 @@ jobs:
       - name: Wait for self-hosted jobs
         uses: yogeshlonkar/wait-for-jobs@v0.4.9
         with:
-          jobs: "Test Runner Integration (${{ matrix.platform }})"
+          jobs: "Integrated Runner Test (${{ matrix.platform }})"
           ignore-skipped: 'false'
           ttl: '2'
 
-      - name: Push image
-        if: github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'release'
-        shell: pwsh
-        run: |
-          $tag = "${{ github.event_name == 'release' && github.event.release.tag_name || 'latest' }}"
-          docker tag "runner-${{ matrix.name }}-local" "ghcr.io/${{ github.repository }}/runner-${{ matrix.name }}:$tag"
-          docker push "ghcr.io/${{ github.repository }}/runner-${{ matrix.name }}:$tag"
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        env:
+          RELEASE_TAG: ghcr.io/${{ github.repository }}/runner-${{ matrix.platform }}:${{ env.DOCKER_TAG }}
+        with:
+          push: true
+          context: ${{ matrix.platform }}
+          tags: ${{ env.RELEASE_TAG }}
 
   cancel-on-failure:
-    name: Cancel Workflow on Build Failure
+    name: Cancel Fast
     needs: build
     if: failure()
     runs-on: ubuntu-latest
@@ -243,8 +248,8 @@ jobs:
       - name: Cancel workflow
         uses: action-pack/cancel@v1
 
-  selfhost:
-    name: Test Runner Integration
+  test:
+    name: Integrated Runner Test
     needs: registration-token
     environment: testing
     permissions:
@@ -264,7 +269,7 @@ jobs:
 
   completion:
     name: Completion
-    needs: [build, selfhost, cleanup-runners]
+    needs: [build, test, cleanup-runners]
     runs-on: ubuntu-latest
     environment: completion
     permissions:
@@ -274,7 +279,7 @@ jobs:
 
   cleanup-runners:
     name: Cleanup Runners
-    needs: [build, selfhost]
+    needs: [build, test]
     if: always()
     runs-on: ubuntu-latest
     permissions:
