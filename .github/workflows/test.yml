@@ -234,7 +234,7 @@ jobs:
           }
 
       - name: Wait for self-hosted jobs
-        uses: yogeshlonkar/wait-for-jobs@v0.4.9
+        uses: yogeshlonkar/wait-for-jobs@b978d0518fc312f407cca3221f0f95387af40233 # v0.4.18
         with:
           jobs: "Integrated Runner Test (${{ matrix.platform }})"
           ignore-skipped: 'false'
