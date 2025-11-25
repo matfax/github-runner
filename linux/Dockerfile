@@ -1,5 +1,5 @@
 # Linux GitHub Actions runner image based on falcondev-oss/actions-runner, with toolchains aligned to the Windows image.
-FROM ghcr.io/falcondev-oss/actions-runner:2.329.0
+FROM ghcr.io/falcondev-oss/actions-runner:2.329.0@sha256:ba047997f69563d3b388743763b5891c5b7272e54dbf0fc7f0c129bdabe96122
 
 LABEL org.opencontainers.image.source="https://github.com/matfax/github-runner"
 LABEL org.opencontainers.image.vendor="matfax"

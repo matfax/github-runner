@@ -1,6 +1,6 @@
 services:
   github-runner:
-    image: ${RUNNER_IMAGE:-ghcr.io/matfax/github-runner/runner-linux:latest}
+    image: ${RUNNER_IMAGE:-ghcr.io/matfax/github-runner/runner-linux:latest@sha256:2fb10422f298366f02421437fb77aa97a4fc4f651db041c633a953a629e9da04}
     restart: "no"
     environment:
       - CUSTOM_ACTIONS_RESULTS_URL=http://host.docker.internal:3000

@@ -1,6 +1,6 @@
 services:
   github-runner:
-    image: ${RUNNER_IMAGE:-ghcr.io/matfax/github-runner/runner-windows:latest}
+    image: ${RUNNER_IMAGE:-ghcr.io/matfax/github-runner/runner-windows:latest@sha256:2e75cc82d09d05eaf7eb09ee38d99e9ca9da74c797d06b93fdb9b8d045acf294}
     restart: "no" # container handles restarts internally; clean idle exit stops it
     environment:
       - CUSTOM_ACTIONS_RESULTS_URL=http://host.docker.internal:3000
