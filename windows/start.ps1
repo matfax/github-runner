@@ -24,7 +24,7 @@ if (-not $RunnerConfigured) {
         exit 1
     }
 
-    Write-Host "⚙️ Configuring Runner: $RunnerName (initial)"
+    Write-Host "Configuring Runner: $RunnerName (initial)"
     ./config.cmd --url $RepoUrl --token $RegToken --name $RunnerName --unattended --work _work --labels $LabelsEnv --replace
     $configExit = $LASTEXITCODE
     if ($configExit -ne 0) {
@@ -33,11 +33,11 @@ if (-not $RunnerConfigured) {
     }
     $env:REG_TOKEN = $null
 } else {
-    Write-Host "ℹ️ Runner already configured. Skipping configuration."
+    Write-Host "Runner already configured. Skipping configuration."
 }
 
 # 2. Run with idle timeout watchdog (exit 0 on idle; non-idle exit triggers restart)
-Write-Host "✅ Listening for jobs..."
+Write-Host "Listening for jobs..."
 $DiagPath = Join-Path (Get-Location) "_diag"
 
 $RestartCount = 0
@@ -57,7 +57,7 @@ while ($RestartCount -lt $MaxRestarts) {
 
         $IdleMinutes = (New-TimeSpan -Start $LastActivity -End (Get-Date)).TotalMinutes
         if ($IdleMinutes -ge $IdleTimeoutMinutes) {
-            Write-Host "⏱️ Idle timeout ($IdleTimeoutMinutes min) reached. Stopping runner..."
+            Write-Host "Idle timeout ($IdleTimeoutMinutes min) reached. Stopping runner..."
             $IdleStop = $true
             try { Stop-Process -Id $RunnerProc.Id -Force } catch {}
             break
@@ -71,14 +71,14 @@ while ($RestartCount -lt $MaxRestarts) {
     }
 
     if ($IdleStop) {
-        Write-Host "🛑 Runner stopped due to idle timeout. Exiting container."
+        Write-Host "Runner stopped due to idle timeout. Exiting container."
         exit 0
     }
 
-    Write-Host "⚠️ Runner exited (code $($RunnerProc.ExitCode)). Restarting run.cmd inside container..."
+    Write-Host "Runner exited (code $($RunnerProc.ExitCode)). Restarting run.cmd inside container..."
     $RestartCount++
     if ($RestartCount -ge $MaxRestarts) {
-        Write-Host "❌ Max restarts ($MaxRestarts) reached. Exiting container."
+        Write-Host "Max restarts ($MaxRestarts) reached. Exiting container."
         exit 1
     }
     Start-Sleep -Seconds 5
