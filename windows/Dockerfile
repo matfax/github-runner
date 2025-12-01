@@ -4,7 +4,7 @@
 FROM mcr.microsoft.com/dotnet/framework/sdk:4.8.1-windowsservercore-ltsc2025
 
 # Versions
-ARG CHOCO_VERSION=2.5.1
+ARG CHOCO_VERSION=2.6.0
 ARG RUNNER_VERSION=2.329.0
 
 # Set metadata labels
