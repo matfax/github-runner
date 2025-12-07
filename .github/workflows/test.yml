@@ -33,6 +33,7 @@ jobs:
       actions: write
       checks: read
     steps:
+      - uses: actions/checkout@v4
       - name: Check for Stuck Jobs and Fallback
         env:
           GH_TOKEN: ${{ github.token }}
@@ -139,12 +140,6 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ github.token }}
-
-      - name: Set up Docker Buildx QEMU
-        if: matrix.platform == 'linux'
-        uses: docker/setup-qemu-action@v2
-        with:
-          platforms: ${{ env.PLATFORMS }}
       
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -160,8 +155,6 @@ jobs:
           load: true
           context: ${{ matrix.platform }}
           tags: ${{ env.TEST_TAG }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
 
       - name: Decode registration token
         id: decoded-reg-token
