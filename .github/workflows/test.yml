@@ -79,7 +79,7 @@ jobs:
           - os: ubuntu-latest
             platform: linux
             socket: "/var/run/docker.sock:/var/run/docker.sock"
-          - os: windows-latest
+          - os: windows-runner-set
             platform: windows
             socket: "\\\\.\\pipe\\docker_engine:\\\\.\\pipe\\docker_engine"
     runs-on: ${{ matrix.os }}
