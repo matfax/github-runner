@@ -19,7 +19,7 @@ LABEL org.opencontainers.image.base.name="mcr.microsoft.com/dotnet/framework/sdk
 SHELL ["powershell", "-Command", "$ErrorActionPreference = 'Stop'; $ProgressPreference = 'SilentlyContinue';"]
 
 # Install Chocolatey
-ADD https://github.com/chocolatey/choco/releases/download/${CHOCO_VERSION}/chocolatey-${CHOCO_VERSION}.0.msi C:\\choco.msi
+ADD https://github.com/chocolatey/choco/releases/download/${CHOCO_VERSION}/chocolatey-${CHOCO_VERSION}.0.msi C:/choco.msi
 
 RUN Set-ExecutionPolicy Bypass -Scope Process -Force; `
     [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; `
@@ -50,13 +50,13 @@ RUN choco install docker-cli -y --version 29.0.2
 RUN choco install openjdk17 -y --version 17.0.2.20220913
 
 # Set working directory
-WORKDIR C:\actions-runner
+WORKDIR C:/actions-runner
 
 ADD https://github.com/falcondev-oss/github-actions-runner/releases/download/v${RUNNER_VERSION}/actions-runner-win-x64-${RUNNER_VERSION}.zip C:\\actions-runner\\runner.zip
 
 RUN Expand-Archive -Path C:\actions-runner\runner.zip -DestinationPath C:\actions-runner; `
     Remove-Item C:\actions-runner\runner.zip -Force
 
-COPY windows/start.ps1 C:\actions-runner\start.ps1
+COPY windows/start.ps1 C:/actions-runner/start.ps1
 
 CMD ["powershell", ".\\start.ps1"]
