@@ -167,7 +167,7 @@ jobs:
           cache-from: type=registry,ref=ghcr.io/${{ github.repository }}/runner-${{ matrix.platform }}:latest
       
       - name: Build Docker Image (without Buildx)
-        if: matrix.platform == "windows"
+        if: matrix.platform == 'windows'
         run: |
           docker pull ghcr.io/${{ github.repository }}/runner-${{ matrix.platform }}:latest
           docker build -t "${{ env.TEST_TAG }}" ${{ matrix.platform }}
@@ -294,7 +294,7 @@ jobs:
 
       - name: Push Docker Image (with Buildx)
         uses: docker/build-push-action@v6
-        if: matrix.platform == "linux" && (github.event_name == 'release' || github.event_name == 'push' || github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.ref_name == 'main'))
+        if: matrix.platform == 'linux' && (github.event_name == 'release' || github.event_name == 'push' || github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.ref_name == 'main'))
         env:
           RELEASE_TAG: ghcr.io/${{ github.repository }}/runner-${{ matrix.platform }}:${{ env.DOCKER_TAG }}
         with:
@@ -304,7 +304,7 @@ jobs:
           platforms: ${{ env.PLATFORMS }}
           
       - name: Push Docker Image (without Buildx)
-        if: matrix.platform == "windows" && (github.event_name == 'release' || github.event_name == 'push' || github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.ref_name == 'main'))
+        if: matrix.platform == 'windows' && (github.event_name == 'release' || github.event_name == 'push' || github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.ref_name == 'main'))
         env:
           RELEASE_TAG: ghcr.io/${{ github.repository }}/runner-${{ matrix.platform }}:${{ env.DOCKER_TAG }}
         run: |
