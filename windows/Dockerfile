@@ -57,6 +57,6 @@ ADD https://github.com/falcondev-oss/github-actions-runner/releases/download/v${
 RUN Expand-Archive -Path C:\actions-runner\runner.zip -DestinationPath C:\actions-runner; `
     Remove-Item C:\actions-runner\runner.zip -Force
 
-COPY windows/start.ps1 C:/actions-runner/start.ps1
+COPY ./windows/start.ps1 C:/actions-runner/start.ps1
 
 CMD ["powershell", ".\\start.ps1"]
