@@ -1,7 +1,7 @@
 # escape=`
 
 # Use Windows Server Core with .NET Framework SDK as base image
-FROM mcr.microsoft.com/dotnet/framework/sdk:4.8.1-windowsservercore-ltsc2025
+FROM mcr.microsoft.com/dotnet/framework/sdk:4.8.1-windowsservercore-ltsc2022
 
 # Versions
 ARG CHOCO_VERSION=2.5.1
