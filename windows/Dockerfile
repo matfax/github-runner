@@ -52,7 +52,7 @@ RUN choco install openjdk17 -y --version 17.0.2.20220913
 # Set working directory
 WORKDIR C:/actions-runner
 
-ADD https://github.com/falcondev-oss/github-actions-runner/releases/download/v${RUNNER_VERSION}/actions-runner-win-x64-${RUNNER_VERSION}.zip C:\\actions-runner\\runner.zip
+ADD https://github.com/falcondev-oss/github-actions-runner/releases/download/v${RUNNER_VERSION}/actions-runner-win-x64-${RUNNER_VERSION}.zip C:/actions-runner/runner.zip
 
 RUN Expand-Archive -Path C:\actions-runner\runner.zip -DestinationPath C:\actions-runner; `
     Remove-Item C:\actions-runner\runner.zip -Force
