@@ -8,6 +8,12 @@ on:
     types: [ published ]
   schedule:
     - cron: "0 0 * * *"
+  workflow_dispatch:
+    inputs:
+      use_fallback:
+        description: 'Force use of GitHub-hosted runner?'
+        type: boolean
+        default: false
 
 concurrency: 
   cancel-in-progress: true
@@ -18,6 +24,43 @@ env:
   RUNNER_MAX_RESTARTS: 1
 
 jobs:
+  watchdog:
+    name: Timeout Watchdog
+    if: ${{ !inputs.use_fallback }}
+    runs-on: ubuntu-latest
+    environment: watchdog-timer
+    permissions:
+      actions: write
+      checks: read
+    steps:
+      - name: Check for Stuck Jobs and Fallback
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "Watchdog timer expired (5 minutes passed). Checking job status..."
+          
+          STUCK_JOBS=$(gh run view "${{ github.run_id }}" --json jobs --jq '
+            .jobs[] 
+            | select(.name | contains("Build")) 
+            | select(.status == "queued" or .status == "waiting") 
+            | .name')
+          
+          if [ -n "$STUCK_JOBS" ]; then
+            echo "❌ Detected stuck jobs (Runner unavailable):"
+            echo "$STUCK_JOBS"
+            echo "-------------------------------------------"
+            echo "Triggering fallback run on GitHub-hosted runners..."
+            
+            gh workflow run "${{ github.workflow }}" --ref "${{ github.ref_name }}" -f use_fallback=true
+            
+            echo "Cancelling this stuck run..."
+            gh run cancel "${{ github.run_id }}"
+            exit 1
+          else
+            echo "✅ All Build jobs are either running or completed. Self-hosted runner is active."
+            exit 0
+          fi
+
   registration-token:
     name: Create Registration Token
     runs-on: ubuntu-latest
@@ -79,7 +122,7 @@ jobs:
           - os: ubuntu-latest
             platform: linux
             socket: "/var/run/docker.sock:/var/run/docker.sock"
-          - os: windows-runner-set
+          - os: ${{ !inputs.use_fallback && "windows-runner-set" || "windows-latest" }}
             platform: windows
             socket: "\\\\.\\pipe\\docker_engine:\\\\.\\pipe\\docker_engine"
     runs-on: ${{ matrix.os }}
