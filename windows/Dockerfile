@@ -18,10 +18,11 @@ SHELL ["powershell", "-Command", "$ErrorActionPreference = 'Stop'; $ProgressPref
 ADD https://community.chocolatey.org/install.ps1 C:/install_choco.ps1
 
 ARG CHOCO_VERSION=2.6.0
+ENV CHOCO_VERSION=${CHOCO_VERSION}
 
 RUN Set-ExecutionPolicy Bypass -Scope Process -Force; `
     [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; `
-    $env:chocolateyVersion = '${CHOCO_VERSION}'; `
+    $env:chocolateyVersion = "${CHOCO_VERSION}"; `
     C:/install_choco.ps1; `
     Remove-Item C:/install_choco.ps1 -Force
 
