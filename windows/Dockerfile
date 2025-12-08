@@ -26,7 +26,7 @@ RUN Set-ExecutionPolicy Bypass -Scope Process -Force; `
     C:/install_choco.ps1; `
     Remove-Item C:/install_choco.ps1 -Force
 
-ENV PATH="C:\\ProgramData\\chocolatey\\bin;${PATH}"
+RUN "[Environment]::SetEnvironmentVariable('PATH', 'C:\ProgramData\chocolatey\bin'+$env:PATH, [EnvironmentVariableTarget]::Machine)"
 
 # Install core tools
 RUN choco install zstandard -y --version 1.5.7.20250308
