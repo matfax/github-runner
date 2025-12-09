@@ -14,6 +14,8 @@ jobs:
   wait:
     name: Wait for Build
     runs-on: ubuntu-latest
+    permissions:
+      actions: read
     outputs:
       conclusion: ${{ steps.wait-for-job.outputs.conclusion }}
     steps:
