@@ -251,18 +251,16 @@ jobs:
       - name: Push Docker Image (with Buildx)
         uses: docker/build-push-action@v6
         if: matrix.platform == 'linux' && (github.event_name == 'release' || github.event_name == 'push' || github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.ref_name == 'main'))
-        env:
-          RELEASE_TAG: ${{ env.DOCKER_REPO }}\:${{ env.DOCKER_RELEASE_PREFIX_OPT }}${{ matrix.tag }}
         with:
           push: true
           context: ${{ matrix.platform }}
-          tags: ${{ env.RELEASE_TAG }}
+          tags: "${{ env.DOCKER_REPO }}:${{ env.DOCKER_RELEASE_PREFIX_OPT }}${{ matrix.tag }}"
           platforms: ${{ env.PLATFORMS }}
           
       - name: Push Docker Image (without Buildx)
         if: matrix.platform == 'windows' && (github.event_name == 'release' || github.event_name == 'push' || github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.ref_name == 'main'))
         env:
-          RELEASE_TAG: ${{ env.DOCKER_REPO }}\:${{ env.DOCKER_RELEASE_PREFIX_OPT }}${{ matrix.tag }}
+          RELEASE_TAG: "${{ env.DOCKER_REPO }}:${{ env.DOCKER_RELEASE_PREFIX_OPT }}${{ matrix.tag }}"
         run: |
           docker tag "${{ env.TEST_TAG }}" "${{ env.RELEASE_TAG }}"
           docker push "${{ env.RELEASE_TAG }}"
