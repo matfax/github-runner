@@ -67,13 +67,6 @@ jobs:
           $out = [Convert]::ToBase64String($payload)
           "out=$out" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
 
-  fallback-handler:
-    name: Fallback Handler
-    needs: registration-token
-    permissions:
-      actions: write
-    uses: ./.github/workflows/fallback.yml
-
   build:
     name: Build and Launch Runners
     needs: registration-token
@@ -267,8 +260,8 @@ jobs:
 
   cancel-on-failure:
     name: Cancel on Build Failure
-    needs: [fallback-handler, build]
-    if: failure() && needs.fallback-handler.outputs.should_fallback != 'true'
+    needs: build
+    if: failure()
     runs-on: ubuntu-latest
     permissions:
       actions: write

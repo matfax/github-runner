@@ -1,0 +1,41 @@
+name: Timeout Watchdog
+
+on:
+  workflow_run:
+    workflows: ["Runner Build and Test"]
+    types: [in_progress]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.workflow_run.run_number }}
+  cancel-in-progress: true
+
+jobs:
+  watchdog:
+    name: Monitor Build Jobs
+    if: github.event.workflow_run.run_attempt == 1
+    runs-on: ubuntu-latest
+    environment: watchdog-timer
+    permissions:
+      actions: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check for stuck jobs
+        id: check
+        run: |
+          BUILD_JOBS=$(gh run view "${{ github.event.workflow_run.id }}" --json jobs --jq '
+            .jobs[] 
+            | select(.name | contains("Build and Launch"))')
+          
+          STUCK=$(echo "$BUILD_JOBS" | jq -r 'select(.status == "queued" or .status == "waiting") | .name // empty')
+          if [ -z "$STUCK" ]; then
+            echo "No stuck Build jobs detected. Exiting."
+            exit 0
+          fi
+      - name: Cancel stuck workflow
+        run: gh run cancel "${{ github.event.workflow_run.id }}"
+      - name: Wait before rerun
+        run: sleep 10
+      - name: Rerun cancelled workflow
+        run: gh run rerun "${{ github.event.workflow_run.id }}"
