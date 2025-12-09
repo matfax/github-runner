@@ -310,9 +310,9 @@ jobs:
 
   merge:
     name: Merge Manifest
-    needs: [build, test, cleanup-runners]
+    needs: [build, test]
+    if: github.event_name == 'release' || github.event_name == 'push' || github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.ref_name == 'main')
     runs-on: ubuntu-latest
-    environment: completion
     permissions:
       contents: read
       packages: write
@@ -320,26 +320,34 @@ jobs:
       DOCKER_TAG: ${{ github.event_name == 'release' && github.event.release.tag_name || 'latest' }}
     steps:
       - uses: actions/checkout@v4
+
       - name: Login to GHCR
-        if: github.event_name == 'release' || github.event_name == 'push' || github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.ref_name == 'main')
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ github.token }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Merge multi-platform images
-        if: github.event_name == 'release' || github.event_name == 'push' || github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.ref_name == 'main')
         run: |
-          docker manifest create ${{ env.DOCKER_REPO }}:${{ env.DOCKER_TAG }} \
-            --amend ${{ env.DOCKER_REPO }}:${{ env.DOCKER_TAG }} \
-            --amend ${{ env.DOCKER_REPO }}:${{ env.DOCKER_RELEASE_PREFIX_OPT }}ubuntu \
-            --amend ${{ env.DOCKER_REPO }}:${{ env.DOCKER_RELEASE_PREFIX_OPT }}windows
-      - name: Push multi-platform manifest
-        if: github.event_name == 'release' || github.event_name == 'push' || github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.ref_name == 'main')
-        run: |
-          docker manifest push ${{ env.DOCKER_REPO }}:${{ env.DOCKER_TAG }}
-      - name: Complete workflow
-        run: echo "Workflow completed successfully."
+          docker buildx imagetools create \
+            -t ${{ env.DOCKER_REPO }}:${{ env.DOCKER_TAG }} \
+            ${{ env.DOCKER_REPO }}:${{ env.DOCKER_RELEASE_PREFIX_OPT }}ubuntu \
+            ${{ env.DOCKER_REPO }}:${{ env.DOCKER_RELEASE_PREFIX_OPT }}windows
+
+  complete:
+    name: Complete Workflow
+    needs: [merge, cleanup-runners]
+    environment: completion
+    runs-on: ubuntu-latest
+    permissions:
+      contents: none
+    steps:
+      - name: Workflow complete
+        run: echo "Workflow has finished all jobs."
 
   cleanup-runners:
     name: Cleanup Runners
