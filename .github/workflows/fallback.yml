@@ -1,0 +1,76 @@
+name: Runner Fallback Handler
+
+on:
+  workflow_call:
+    outputs:
+      should_fallback:
+        description: Whether a fallback to GitHub-hosted runners is needed
+        value: ${{ jobs.watchdog.outputs.should_fallback }}
+
+jobs:
+  watchdog:
+    name: Timeout Watchdog
+    runs-on: ubuntu-latest
+    environment: watchdog-timer
+    permissions:
+      actions: read
+    outputs:
+      should_fallback: ${{ steps.set-output.outputs.should_fallback }}
+    steps:
+      - name: Skip on rerun
+        if: github.run_attempt > 1
+        run: echo "Rerun detected, skip watchdog check"
+      - uses: actions/checkout@v4
+        if: github.run_attempt == 1
+      - name: Check for Stuck Jobs
+        if: github.run_attempt == 1
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "Watchdog timer expired (5 minutes passed). Checking job status..."
+          
+          STUCK_JOBS=$(gh run view "${{ github.run_id }}" --json jobs --jq '
+            .jobs[] 
+            | select(.name | contains("Build")) 
+            | select(.status == "queued" or .status == "waiting") 
+            | .name')
+          
+          if [ -n "$STUCK_JOBS" ]; then
+            echo "❌ Detected stuck jobs (Runner unavailable):"
+            echo "$STUCK_JOBS"
+            echo "stuck=true" >> $GITHUB_OUTPUT
+          else
+            echo "✅ All Build jobs are either running or completed. Self-hosted runner is active."
+            echo "stuck=false" >> $GITHUB_OUTPUT
+          fi
+      - name: Set final output
+        id: set-output
+        run: |
+          stuck="${{ steps.check.outputs.stuck || 'false' }}"
+          echo "should_fallback=$stuck" >> $GITHUB_OUTPUT
+
+  cancel-on-timeout:
+    name: Cancel on Timeout
+    needs: watchdog
+    if: needs.watchdog.outputs.should_fallback == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: Cancel workflow
+        uses: action-pack/cancel@v1
+
+  rerun-on-cancellation:
+    name: Rerun on Timeout Cancellation
+    needs: [watchdog, cancel-on-timeout]
+    if: cancelled() && needs.watchdog.outputs.should_fallback == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rerun workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh run rerun ${{ github.run_id }}
