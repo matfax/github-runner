@@ -249,7 +249,7 @@ jobs:
           ignore-skipped: 'false'
           ttl: '2'
 
-      - name: Build Multi-Platform Docker Image (using Buildx)
+      - name: Build Multi-Arch Docker Image (using Buildx)
         if: matrix.platform == 'linux'
         uses: docker/build-push-action@v6
         with:
@@ -327,14 +327,14 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ github.token }}
-      - name: Merge multi-arch images
+      - name: Merge multi-platform images
         if: github.event_name == 'release' || github.event_name == 'push' || github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.ref_name == 'main')
         run: |
           docker manifest create ${{ env.DOCKER_REPO }}:${{ env.DOCKER_TAG }} \
             --amend ${{ env.DOCKER_REPO }}:${{ env.DOCKER_TAG }} \
             --amend ${{ env.DOCKER_REPO }}:${{ env.DOCKER_RELEASE_PREFIX_OPT }}ubuntu \
             --amend ${{ env.DOCKER_REPO }}:${{ env.DOCKER_RELEASE_PREFIX_OPT }}windows
-      - name: Push multi-arch manifest
+      - name: Push multi-platform manifest
         if: github.event_name == 'release' || github.event_name == 'push' || github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.ref_name == 'main')
         run: |
           docker manifest push ${{ env.DOCKER_REPO }}:${{ env.DOCKER_TAG }}
