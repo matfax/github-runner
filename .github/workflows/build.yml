@@ -120,6 +120,7 @@ jobs:
           load: true
           context: ${{ matrix.platform }}
           tags: ${{ env.TEST_TAG }}
+          platforms: ${{ env.PLATFORMS }}
           cache-from: type=registry,ref=${{ env.DOCKER_REPO }}:buildcache-${{ matrix.platform }}
           cache-to: type=gha,mode=max
       
