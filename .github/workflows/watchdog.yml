@@ -56,7 +56,7 @@ jobs:
         run: gh run cancel "${{ github.event.workflow_run.id }}"
       - name: Wait for workflow completion
         if: steps.check.outputs.stuck == 'true'
-        timeout-minutes: 1
+        timeout-minutes: 2
         run: |
           echo "Waiting for workflow to complete after cancellation..."
           while true; do
