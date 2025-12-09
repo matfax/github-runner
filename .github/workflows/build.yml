@@ -121,7 +121,7 @@ jobs:
           context: ${{ matrix.platform }}
           tags: ${{ env.TEST_TAG }}
           cache-from: type=registry,ref=${{ env.DOCKER_REPO }}:buildcache-${{ matrix.platform }}
-          cache-to: type=registry,ref=${{ env.DOCKER_REPO }}:buildcache-${{ matrix.platform }},mode=max
+          cache-to: type=gha,mode=max
       
       - name: Build Docker Image (without Buildx)
         if: matrix.platform == 'windows'
@@ -257,7 +257,7 @@ jobs:
           context: ${{ matrix.platform }}
           tags: "${{ env.DOCKER_REPO }}:${{ env.DOCKER_RELEASE_PREFIX_OPT }}${{ matrix.tag }}"
           platforms: ${{ env.PLATFORMS }}
-          cache-from: type=registry,ref=${{ env.DOCKER_REPO }}:buildcache-${{ matrix.platform }}
+          cache-from: type=gha
           cache-to: type=registry,ref=${{ env.DOCKER_REPO }}:buildcache-${{ matrix.platform }},mode=max
           
       - name: Push Docker Image (without Buildx)
