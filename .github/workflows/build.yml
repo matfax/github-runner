@@ -90,7 +90,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       TEST_TAG: runner-${{ matrix.platform }}-local
-      TEST_PROJECT: ${{ github.run_id }}-${{ matrix.platform }}
+      TEST_PROJECT: test-${{ github.run_id }}-${{ matrix.platform }}
       PLATFORMS: ${{ matrix.platform == 'linux' && 'linux/amd64,linux/arm64' || 'windows/amd64' }}
     steps:
       - uses: actions/checkout@v4
@@ -337,7 +337,7 @@ jobs:
         shell: pwsh
         env:
           PAT_TOKEN: ${{ secrets.REGISTRATION_PAT }}
-          RUNNER_NAMES: "ci-${{ github.run_id }}-linux,ci-${{ github.run_id }}-windows"
+          RUNNER_NAMES: "test-${{ github.run_id }}-linux,test-${{ github.run_id }}-windows"
           REPO_FULL_NAME: ${{ github.repository }}
         run: |
           if (-not $env:PAT_TOKEN) { throw "PAT_TOKEN (REGISTRATION_PAT) is required for cleanup." }
