@@ -33,9 +33,13 @@ jobs:
             echo "No stuck Build jobs detected. Exiting."
             exit 0
           fi
+          echo "stuck=true" >> $GITHUB_OUTPUT
       - name: Cancel stuck workflow
+        if: steps.check.outputs.stuck == 'true'
         run: gh run cancel "${{ github.event.workflow_run.id }}"
       - name: Wait before rerun
-        run: sleep 10
+        if: steps.check.outputs.stuck == 'true'
+        run: sleep 20
       - name: Rerun cancelled workflow
+        if: steps.check.outputs.stuck == 'true'
         run: gh run rerun "${{ github.event.workflow_run.id }}"
