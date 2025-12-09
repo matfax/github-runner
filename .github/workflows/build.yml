@@ -120,7 +120,8 @@ jobs:
           load: true
           context: ${{ matrix.platform }}
           tags: ${{ env.TEST_TAG }}
-          cache-from: type=registry,ref=${{ env.DOCKER_REPO }}:${{ matrix.tag }}
+          cache-from: type=registry,ref=${{ env.DOCKER_REPO }}:buildcache-${{ matrix.platform }}
+          cache-to: type=registry,ref=${{ env.DOCKER_REPO }}:buildcache-${{ matrix.platform }},mode=max
       
       - name: Build Docker Image (without Buildx)
         if: matrix.platform == 'windows'
@@ -256,6 +257,8 @@ jobs:
           context: ${{ matrix.platform }}
           tags: "${{ env.DOCKER_REPO }}:${{ env.DOCKER_RELEASE_PREFIX_OPT }}${{ matrix.tag }}"
           platforms: ${{ env.PLATFORMS }}
+          cache-from: type=registry,ref=${{ env.DOCKER_REPO }}:buildcache-${{ matrix.platform }}
+          cache-to: type=registry,ref=${{ env.DOCKER_REPO }}:buildcache-${{ matrix.platform }},mode=max
           
       - name: Push Docker Image (without Buildx)
         if: matrix.platform == 'windows' && (github.event_name == 'release' || github.event_name == 'push' || github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.ref_name == 'main'))
