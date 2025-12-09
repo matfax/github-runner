@@ -120,7 +120,6 @@ jobs:
           load: true
           context: ${{ matrix.platform }}
           tags: ${{ env.TEST_TAG }}
-          platforms: ${{ env.PLATFORMS }}
           cache-from: type=registry,ref=${{ env.DOCKER_REPO }}:buildcache-${{ matrix.platform }}
           cache-to: type=gha,mode=max
       
@@ -249,6 +248,16 @@ jobs:
           jobs: "Integrated Runner Test (${{ matrix.platform }})"
           ignore-skipped: 'false'
           ttl: '2'
+
+      - name: Build Multi-Platform Docker Image (using Buildx)
+        if: matrix.platform == 'linux'
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.platform }}
+          tags: ${{ env.TEST_TAG }}
+          platforms: ${{ env.PLATFORMS }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Push Docker Image (with Buildx)
         uses: docker/build-push-action@v6
