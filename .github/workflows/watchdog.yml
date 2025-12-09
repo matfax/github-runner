@@ -13,6 +13,8 @@ jobs:
   wait:
     name: Wait for registration job to complete
     runs-on: ubuntu-latest
+    outputs:
+      conclusion: ${{ steps.wait-for-job.outputs.conclusion }}
     steps:
       - uses: beacon-biosignals/wait-for-job@v1
         id: wait-for-job
@@ -24,7 +26,7 @@ jobs:
   watchdog:
     name: Monitor Build Jobs
     needs: wait
-    if: github.event.workflow_run.run_attempt == 1
+    if: github.event.workflow_run.run_attempt == 1 && needs.wait.outputs.conclusion == 'success'
     runs-on: ubuntu-latest
     environment: watchdog-timer
     permissions:
@@ -49,9 +51,18 @@ jobs:
       - name: Cancel stuck workflow
         if: steps.check.outputs.stuck == 'true'
         run: gh run cancel "${{ github.event.workflow_run.id }}"
-      - name: Wait before rerun
+      - name: Wait for workflow completion
         if: steps.check.outputs.stuck == 'true'
-        run: sleep 20
+        timeout-minutes: 1
+        run: |
+          echo "Waiting for workflow to complete after cancellation..."
+          while true; do
+            STATUS=$(gh run view "${{ github.event.workflow_run.id }}" --json status --jq '.status')
+            if [ "$STATUS" == "completed" ]; then
+              break
+            fi
+            sleep 5
+          done
       - name: Rerun cancelled workflow
         if: steps.check.outputs.stuck == 'true'
         run: gh run rerun "${{ github.event.workflow_run.id }}"
