@@ -72,8 +72,8 @@ PowerShell watcher that detects queued self-hosted jobs across your admin repos 
    ```
 
 ## Images (GHCR)
-- Linux runner image is built from `linux/Dockerfile` to `ghcr.io/matfax/github-runner/runner-linux` via `.github/workflows/build-linux-image.yml`.
-- Windows runner image is built from `windows/Dockerfile` to `ghcr.io/matfax/github-runner/runner-windows` via `.github/workflows/build-windows-image.yml`.
+- Linux runner image is built from `linux/Dockerfile` to `ghcr.io/matfax/github-runner/runner:ubuntu` via `.github/workflows/build-linux-image.yml`.
+- Windows runner image is built from `windows/Dockerfile` to `ghcr.io/matfax/github-runner/runner:windows` via `.github/workflows/build-windows-image.yml`.
 - CI behavior:
   - `push` to default branch → push `:latest`.
   - `pull_request` → build only (no push).
@@ -83,8 +83,8 @@ PowerShell watcher that detects queued self-hosted jobs across your admin repos 
 - Reads settings from `config.yml`; fetches the GitHub PAT on-demand from 1Password Connect each poll cycle and discards it after use.
 - Starts the 1Password Connect stack and cache server in WSL (compose in `connect/` and `caching/`) once, shared for all runners.
 - Watches admin repos (optionally filtered) for queued self-hosted jobs:
-  - `windowsLabelRegex` → Windows runner via host Docker (image `ghcr.io/matfax/github-runner/runner-windows:latest`, compose file `windows/docker-compose.yml`).
-  - `linuxLabelRegex` → Linux runner via WSL Docker (image `ghcr.io/matfax/github-runner/runner-linux:latest`, compose file `linux/docker-compose.yml`).
+  - `windowsLabelRegex` → Windows runner via host Docker (image `ghcr.io/matfax/github-runner/runner:windows`, compose file `windows/docker-compose.yml`).
+  - `linuxLabelRegex` → Linux runner via WSL Docker (image `ghcr.io/matfax/github-runner/runner:ubuntu`, compose file `linux/docker-compose.yml`).
 - Registration tokens are only set in the runner containers during initial configuration and are cleared before the runner starts processing jobs (`REG_TOKEN` is unset in the start scripts). Idle timeout (`runnerIdleTimeoutMinutes` / env `RUNNER_IDLE_TIMEOUT_MINUTES`) is enforced by both start scripts; idle runners exit cleanly so compose can recreate when needed.
   `runnerMaxRestarts` / env `RUNNER_MAX_RESTARTS` limits restart attempts for non-idle exits.
 

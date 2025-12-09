@@ -1,4 +1,4 @@
-name: Runner Build and Test
+name: Build and Test
 
 on:
   push:
@@ -17,6 +17,8 @@ concurrency:
 env:
   RUNNER_IDLE_TIMEOUT_MINUTES: 5
   RUNNER_MAX_RESTARTS: 1
+  DOCKER_REPO: ghcr.io/${{ github.repository }}/runner
+  DOCKER_RELEASE_PREFIX_OPT: ${{ github.event_name == 'release' && github.event.release.tag_name || '' }}${{ github.event_name == 'release' && '-' || '' }}
 
 jobs:
   registration-token:
@@ -79,13 +81,14 @@ jobs:
         include:
           - os: ubuntu-latest
             platform: linux
+            tag: ubuntu
             socket: "/var/run/docker.sock:/var/run/docker.sock"
           - os: ${{ github.run_attempt > 1 && 'windows-latest' || 'windows-runner-set' }}
             platform: windows
+            tag: windows
             socket: "\\\\.\\pipe\\docker_engine:\\\\.\\pipe\\docker_engine"
     runs-on: ${{ matrix.os }}
     env:
-      DOCKER_TAG: ${{ github.event_name == 'release' && github.event.release.tag_name || 'latest' }}
       TEST_TAG: runner-${{ matrix.platform }}-local
       TEST_PROJECT: ${{ github.run_id }}-${{ matrix.platform }}
       PLATFORMS: ${{ matrix.platform == 'linux' && 'linux/amd64,linux/arm64' || 'windows/amd64' }}
@@ -97,6 +100,12 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ github.token }}
+
+      - name: Set up QEMU
+        if: matrix.platform == 'linux'
+        uses: docker/setup-qemu-action@v2
+        with:
+          platforms: ${{ env.PLATFORMS }}
       
       - name: Set up Docker Buildx
         if: matrix.platform == 'linux'
@@ -111,12 +120,12 @@ jobs:
           load: true
           context: ${{ matrix.platform }}
           tags: ${{ env.TEST_TAG }}
-          cache-from: type=registry,ref=ghcr.io/${{ github.repository }}/runner-${{ matrix.platform }}:latest
+          cache-from: type=registry,ref=${{ env.DOCKER_REPO }}:${{ matrix.tag }}
       
       - name: Build Docker Image (without Buildx)
         if: matrix.platform == 'windows'
         run: |
-          docker pull ghcr.io/${{ github.repository }}/runner-${{ matrix.platform }}:latest
+          docker pull ${{ env.DOCKER_REPO }}:${{ matrix.tag }} || echo "No cache image found"
           docker build -t "${{ env.TEST_TAG }}" ${{ matrix.platform }}
 
       - name: Decode registration token
@@ -243,7 +252,7 @@ jobs:
         uses: docker/build-push-action@v6
         if: matrix.platform == 'linux' && (github.event_name == 'release' || github.event_name == 'push' || github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.ref_name == 'main'))
         env:
-          RELEASE_TAG: ghcr.io/${{ github.repository }}/runner-${{ matrix.platform }}:${{ env.DOCKER_TAG }}
+          RELEASE_TAG: ${{ env.DOCKER_REPO }}\:${{ env.DOCKER_RELEASE_PREFIX_OPT }}${{ matrix.tag }}
         with:
           push: true
           context: ${{ matrix.platform }}
@@ -253,7 +262,7 @@ jobs:
       - name: Push Docker Image (without Buildx)
         if: matrix.platform == 'windows' && (github.event_name == 'release' || github.event_name == 'push' || github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.ref_name == 'main'))
         env:
-          RELEASE_TAG: ghcr.io/${{ github.repository }}/runner-${{ matrix.platform }}:${{ env.DOCKER_TAG }}
+          RELEASE_TAG: ${{ env.DOCKER_REPO }}\:${{ env.DOCKER_RELEASE_PREFIX_OPT }}${{ matrix.tag }}
         run: |
           docker tag "${{ env.TEST_TAG }}" "${{ env.RELEASE_TAG }}"
           docker push "${{ env.RELEASE_TAG }}"
@@ -288,15 +297,33 @@ jobs:
     steps:
       - run: echo "Self-hosted runner alive on ${{ matrix.platform }}"
 
-  completion:
-    name: Completion
+  merge:
+    name: Merge Manifest
     needs: [build, test, cleanup-runners]
     runs-on: ubuntu-latest
     environment: completion
     permissions:
       contents: read
+      packages: write
+    env:
+      DOCKER_TAG: ${{ github.event_name == 'release' && github.event.release.tag_name || 'latest' }}
     steps:
-      - run: echo "Build and test completed successfully"
+      - uses: actions/checkout@v4
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+      - name: Merge multi-arch images
+        run: |
+          docker manifest create ${{ env.DOCKER_REPO }}:${{ env.DOCKER_TAG }} \
+            --amend ${{ env.DOCKER_REPO }}:${{ env.DOCKER_TAG }} \
+            --amend ${{ env.DOCKER_REPO }}:${{ env.DOCKER_RELEASE_PREFIX_OPT }}ubuntu \
+            --amend ${{ env.DOCKER_REPO }}:${{ env.DOCKER_RELEASE_PREFIX_OPT }}windows
+      - name: Push multi-arch manifest
+        run: |
+          docker manifest push ${{ env.DOCKER_REPO }}:${{ env.DOCKER_TAG }}
 
   cleanup-runners:
     name: Cleanup Runners
