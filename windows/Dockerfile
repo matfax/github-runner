@@ -31,7 +31,7 @@ RUN "[Environment]::SetEnvironmentVariable('PATH', 'C:\ProgramData\chocolatey\bi
 # Install core tools
 RUN choco install zstandard -y --version 1.5.7.20250308
 RUN choco install git -y --version 2.52.0 --params '/GitAndUnixToolsOnPath'
-RUN choco install gh -y --version 2.83.1
+RUN choco install gh -y --version 2.83.2
 
 # Install Rust
 RUN choco install rust -y --version 1.91.1
