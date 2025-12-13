@@ -53,7 +53,7 @@ RUN choco install openjdk17 -y --version 17.0.2.20220913
 # Install BuildKit and dependencies
 ARG CONTAINERD_VERSION=2.0.0
 ARG BUILDKIT_VERSION=0.18.0
-ARG CNI_PLUGIN_VERSION=0.3.1
+ARG CNI_PLUGIN_VERSION=0.3.3
 
 # Install containerd
 ADD https://github.com/containerd/containerd/releases/download/v${CONTAINERD_VERSION}/containerd-${CONTAINERD_VERSION}-windows-amd64.tar.gz C:/containerd.tar.gz
