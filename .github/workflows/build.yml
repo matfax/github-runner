@@ -339,7 +339,7 @@ jobs:
 
   merge-status:
     name: Merge Status Check
-    needs: [merge, cleanup-runners]
+    needs: [merge]
     if: always()
     runs-on: ubuntu-latest
     permissions:
@@ -353,15 +353,16 @@ jobs:
           if [ "${{ needs.merge.result }}" = "failure" ]; then
             echo "result=failure" >> "$GITHUB_OUTPUT"
             exit 1
-          elif [ "${{ needs.merge.result }}" = "skipped" ] || [ "${{ needs.merge.result }}" = "success" ]; then
-            echo "result=success" >> "$GITHUB_OUTPUT"
           else
             echo "result=${{ needs.merge.result }}" >> "$GITHUB_OUTPUT"
           fi
 
   complete:
     name: Complete Workflow
-    needs: merge-status
+    needs: 
+      - merge-status
+      - cleanup-runners
+      - build
     environment: completion
     runs-on: ubuntu-latest
     permissions:
