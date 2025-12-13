@@ -134,6 +134,7 @@ jobs:
       
       - name: Build Docker Image (without Buildx)
         if: matrix.platform == 'windows'
+        shell: pwsh
         run: |
           docker pull ${{ env.DOCKER_REPO }}:${{ matrix.tag }} || echo "No cache image found"
           docker build -t "${{ env.TEST_TAG }}" ${{ matrix.platform }}
