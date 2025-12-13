@@ -30,7 +30,7 @@ jobs:
     outputs:
       reg_token: ${{ steps.encoded-reg-token.outputs.out }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - name: Create registration token
         id: token
         shell: bash
@@ -93,9 +93,9 @@ jobs:
       TEST_PROJECT: test-${{ github.run_id }}-${{ matrix.platform }}
       PLATFORMS: ${{ matrix.platform == 'linux' && 'linux/amd64,linux/arm64' || 'windows/amd64' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - name: Login to GHCR
-        uses: docker/login-action@v3
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -103,19 +103,19 @@ jobs:
 
       - name: Set up QEMU
         if: matrix.platform == 'linux'
-        uses: docker/setup-qemu-action@v2
+        uses: docker/setup-qemu-action@2b82ce82d56a2a04d2637cd93a637ae1b359c0a7 # v2
         with:
           platforms: ${{ env.PLATFORMS }}
       
       - name: Set up Docker Buildx
         if: matrix.platform == 'linux'
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3
         with:
           platforms: ${{ env.PLATFORMS }}
 
       - name: Build Multi-Arch Docker Image (using Buildx)
         if: matrix.platform == 'linux'
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6
         with:
           context: ${{ matrix.platform }}
           tags: ${{ env.TEST_TAG }}
@@ -125,7 +125,7 @@ jobs:
       
       - name: Load Docker Image (using Buildx)
         if: matrix.platform == 'linux'
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6
         with:
           load: true
           context: ${{ matrix.platform }}
@@ -253,14 +253,14 @@ jobs:
           }
 
       - name: Wait for self-hosted jobs
-        uses: yogeshlonkar/wait-for-jobs@v0.4.9
+        uses: yogeshlonkar/wait-for-jobs@3244ca00e7afdbaa306c62813ee95f371bdff93e # v0.4.9
         with:
           jobs: "Integrated Runner Test (${{ matrix.platform }})"
           ignore-skipped: 'false'
           ttl: '2'
 
       - name: Push Docker Image (with Buildx)
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6
         if: matrix.platform == 'linux' && (github.event_name == 'release' || github.event_name == 'push' || github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.ref_name == 'main'))
         with:
           push: true
@@ -287,7 +287,7 @@ jobs:
       actions: write
     steps:
       - name: Cancel workflow
-        uses: action-pack/cancel@v1
+        uses: action-pack/cancel@bb57491c99942855e9da36ffbe86a686b2bd35a3 # v1
 
   test:
     name: Integrated Runner Test
@@ -319,17 +319,17 @@ jobs:
     env:
       DOCKER_TAG: ${{ github.event_name == 'release' && github.event.release.tag_name || 'latest' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Login to GHCR
-        uses: docker/login-action@v3
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ github.token }}
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3
 
       - name: Merge multi-platform images
         run: |
@@ -381,7 +381,7 @@ jobs:
       contents: read
     environment: registration
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - name: Delete self-hosted runners for this run
         shell: pwsh
         env:
