@@ -12,7 +12,7 @@ LABEL org.opencontainers.image.description="Windows Community Runner for GitHub 
 LABEL org.opencontainers.image.base.name="mcr.microsoft.com/dotnet/framework/sdk:4.8.1-windowsservercore-ltsc2025"
 
 # Switch to PowerShell for build commands
-SHELL ["pwsh", "-Command", "$ErrorActionPreference = 'Stop'; $ProgressPreference = 'SilentlyContinue'"]
+SHELL ["powershell", "-Command", "$ErrorActionPreference = 'Stop'; $ProgressPreference = 'SilentlyContinue'"]
 
 # Install Chocolatey
 ADD https://community.chocolatey.org/install.ps1 C:/install_choco.ps1
@@ -30,6 +30,10 @@ RUN "[Environment]::SetEnvironmentVariable('PATH', 'C:\ProgramData\chocolatey\bi
 
 # Install PowerShell Core and core tools
 RUN choco install powershell-core -y --version 7.5.0
+
+# Switch to PowerShell 7
+SHELL ["pwsh", "-Command", "$ErrorActionPreference = 'Stop'; $ProgressPreference = 'SilentlyContinue'"]
+
 RUN choco install zstandard -y --version 1.5.7.20250308
 RUN choco install git -y --version 2.52.0 --params '/GitAndUnixToolsOnPath'
 RUN choco install gh -y --version 2.83.1
