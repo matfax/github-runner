@@ -36,68 +36,15 @@
     },
     {
       "customType": "regex",
-      "description": "Update Chocolatey MSI version in Windows Dockerfile",
+      "description": "Update GitHub release versions from ARGs ending with _GITHUB_VERSION",
       "managerFilePatterns": [
-        "windows/Dockerfile"
+        "**/Dockerfile"
       ],
       "matchStrings": [
-        "ARG CHOCO_VERSION=(?<currentValue>[\\w\\.-]+)"
+        "ARG \\w+?_GITHUB_VERSION=(\\?<currentValue>[^\\s#]+)\\s+#\\s*repository:\\s*(\\?<depName>[\\w./-]+)"
       ],
-      "depNameTemplate": "chocolatey/choco",
       "datasourceTemplate": "github-releases",
-      "versioningTemplate": "semver"
-    },
-    {
-      "customType": "regex",
-      "description": "Update GitHub Actions runner version in Windows Dockerfile",
-      "managerFilePatterns": [
-        "windows/Dockerfile"
-      ],
-      "matchStrings": [
-        "ARG RUNNER_VERSION=(?<currentValue>[\\w\\.-]+)"
-      ],
-      "depNameTemplate": "falcondev-oss/github-actions-runner",
-      "datasourceTemplate": "github-releases",
-      "extractVersionTemplate": "^v?(?<version>.+)$"
-    },
-    {
-      "customType": "regex",
-      "description": "Update containerd version in Windows Dockerfile",
-      "managerFilePatterns": [
-        "windows/Dockerfile"
-      ],
-      "matchStrings": [
-        "ARG CONTAINERD_VERSION=(?<currentValue>[\\w\\.-]+)"
-      ],
-      "depNameTemplate": "containerd/containerd",
-      "datasourceTemplate": "github-releases",
-      "extractVersionTemplate": "^v?(?<version>.+)$"
-    },
-    {
-      "customType": "regex",
-      "description": "Update BuildKit version in Windows Dockerfile",
-      "managerFilePatterns": [
-        "windows/Dockerfile"
-      ],
-      "matchStrings": [
-        "ARG BUILDKIT_VERSION=(?<currentValue>[\\w\\.-]+)"
-      ],
-      "depNameTemplate": "moby/buildkit",
-      "datasourceTemplate": "github-releases",
-      "extractVersionTemplate": "^v?(?<version>.+)$"
-    },
-    {
-      "customType": "regex",
-      "description": "Update Windows CNI plugin version in Windows Dockerfile",
-      "managerFilePatterns": [
-        "windows/Dockerfile"
-      ],
-      "matchStrings": [
-        "ARG CNI_PLUGIN_VERSION=(?<currentValue>[\\w\\.-]+)"
-      ],
-      "depNameTemplate": "microsoft/windows-container-networking",
-      "datasourceTemplate": "github-releases",
-      "extractVersionTemplate": "^v?(?<version>.+)$"
+      "extractVersionTemplate": "^v?(\\?<version>.+)$"
     }
   ]
 }
