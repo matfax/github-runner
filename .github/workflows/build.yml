@@ -337,9 +337,31 @@ jobs:
             ${{ env.DOCKER_REPO }}:${{ env.DOCKER_RELEASE_PREFIX_OPT }}ubuntu \
             ${{ env.DOCKER_REPO }}:${{ env.DOCKER_RELEASE_PREFIX_OPT }}windows
 
+  merge-status:
+    name: Merge Status Check
+    needs: [merge, cleanup-runners]
+    if: always()
+    runs-on: ubuntu-latest
+    permissions:
+      contents: none
+    outputs:
+      merge_result: ${{ steps.check-status.outputs.result }}
+    steps:
+      - name: Check merge job status
+        id: check-status
+        run: |
+          if [ "${{ needs.merge.result }}" = "failure" ]; then
+            echo "result=failure" >> "$GITHUB_OUTPUT"
+            exit 1
+          elif [ "${{ needs.merge.result }}" = "skipped" ] || [ "${{ needs.merge.result }}" = "success" ]; then
+            echo "result=success" >> "$GITHUB_OUTPUT"
+          else
+            echo "result=${{ needs.merge.result }}" >> "$GITHUB_OUTPUT"
+          fi
+
   complete:
     name: Complete Workflow
-    needs: [merge, cleanup-runners]
+    needs: merge-status
     environment: completion
     runs-on: ubuntu-latest
     permissions:
