@@ -80,8 +80,9 @@ RUN "[Environment]::SetEnvironmentVariable('PATH', ($env:ProgramFiles + '\\build
 # Install CNI plugins
 ADD https://github.com/microsoft/windows-container-networking/releases/download/v${CNI_GITHUB_VERSION}/windows-container-networking-cni-amd64-v${CNI_GITHUB_VERSION}.zip C:/cni-plugins.zip
 RUN Write-Host "Installing CNI plugins v${CNI_GITHUB_VERSION}..."; `
-    $cniBinDir = "$env:ProgramFiles\containerd\cni\bin"; `
-    tar xvf C:\cni-plugins.zip -C $cniBinDir; `
+    $cniBinDir = Join-Path $env:ProgramFiles 'containerd' 'cni' 'bin'; `
+    New-Item -ItemType Directory -Force -Path $cniBinDir | Out-Null; `
+    Expand-Archive -Path C:\cni-plugins.zip -DestinationPath $cniBinDir; `
     Remove-Item C:\cni-plugins.zip -Force
 
 # Set working directory
