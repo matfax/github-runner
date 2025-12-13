@@ -1,7 +1,7 @@
 # escape=`
 
 # Use Windows Server Core with .NET Framework SDK as base image
-FROM mcr.microsoft.com/dotnet/framework/sdk:4.8.1-windowsservercore-ltsc2022
+FROM mcr.microsoft.com/dotnet/framework/sdk:4.8.1-windowsservercore-ltsc2022@sha256:709790f4da6746d13779f6f4324f31fc23991a42b160cf790583939c12eafc54
 
 # Set metadata labels
 LABEL org.opencontainers.image.source="https://github.com/matfax/github-runner"
