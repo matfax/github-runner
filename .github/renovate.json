@@ -41,7 +41,7 @@
         "**/Dockerfile"
       ],
       "matchStrings": [
-        "ARG \\w+?_GITHUB_VERSION=(\\?<currentValue>[^\\s#]+)\\s+#\\s*repository:\\s*(\\?<depName>[\\w./-]+)"
+        "ARG \\w+?_GITHUB_VERSION=(?<currentValue>[^\\s#]+)\\s+#\\s*repository:\\s*(?<depName>[\\w./-]+)"
       ],
       "datasourceTemplate": "github-releases",
       "extractVersionTemplate": "^v?(\\?<version>.+)$"
