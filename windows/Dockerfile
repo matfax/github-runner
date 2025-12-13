@@ -50,6 +50,34 @@ RUN choco install nodejs -y --version 25.2.1
 RUN choco install docker-cli -y --version 29.0.2
 RUN choco install openjdk17 -y --version 17.0.2.20220913
 
+# Install BuildKit and dependencies
+ARG CONTAINERD_VERSION=2.0.0
+ARG BUILDKIT_VERSION=0.18.0
+ARG CNI_PLUGIN_VERSION=0.3.1
+
+# Install containerd
+ADD https://github.com/containerd/containerd/releases/download/v${CONTAINERD_VERSION}/containerd-${CONTAINERD_VERSION}-windows-amd64.tar.gz C:/containerd.tar.gz
+RUN Write-Host "Installing containerd v${CONTAINERD_VERSION}..."; `
+    tar.exe xvf C:\containerd.tar.gz -C "C:\Program Files"; `
+    Remove-Item C:\containerd.tar.gz -Force; `
+    mkdir "$env:ProgramFiles\containerd\cni\bin" -Force; `
+    mkdir "$env:ProgramFiles\containerd\cni\conf" -Force
+
+# Install BuildKit
+ADD https://github.com/moby/buildkit/releases/download/v${BUILDKIT_VERSION}/buildkit-v${BUILDKIT_VERSION}.windows-amd64.tar.gz C:/buildkit.tar.gz
+RUN Write-Host "Installing BuildKit v${BUILDKIT_VERSION}..."; `
+    tar.exe xvf C:\buildkit.tar.gz -C "C:\Program Files"; `
+    Remove-Item C:\buildkit.tar.gz -Force; `
+    $Path = [Environment]::GetEnvironmentVariable("PATH", "Machine") + [IO.Path]::PathSeparator + "C:\Program Files\bin"; `
+    [Environment]::SetEnvironmentVariable("Path", $Path, "Machine")
+
+# Install CNI plugins
+ADD https://github.com/microsoft/windows-container-networking/releases/download/v${CNI_PLUGIN_VERSION}/windows-container-networking-cni-amd64-v${CNI_PLUGIN_VERSION}.zip C:/cni-plugins.zip
+RUN Write-Host "Installing CNI plugins v${CNI_PLUGIN_VERSION}..."; `
+    $cniBinDir = "$env:ProgramFiles\containerd\cni\bin"; `
+    tar xvf C:\cni-plugins.zip -C $cniBinDir; `
+    Remove-Item C:\cni-plugins.zip -Force
+
 # Set working directory
 WORKDIR C:/actions-runner
 

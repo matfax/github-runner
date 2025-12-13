@@ -58,7 +58,46 @@
       ],
       "depNameTemplate": "falcondev-oss/github-actions-runner",
       "datasourceTemplate": "github-releases",
-      "versioningTemplate": "semver"
+      "extractVersionTemplate": "^v?(?<version>.+)$"
+    },
+    {
+      "customType": "regex",
+      "description": "Update containerd version in Windows Dockerfile",
+      "managerFilePatterns": [
+        "windows/Dockerfile"
+      ],
+      "matchStrings": [
+        "ARG CONTAINERD_VERSION=(?<currentValue>[\\w\\.-]+)"
+      ],
+      "depNameTemplate": "containerd/containerd",
+      "datasourceTemplate": "github-releases",
+      "extractVersionTemplate": "^v?(?<version>.+)$"
+    },
+    {
+      "customType": "regex",
+      "description": "Update BuildKit version in Windows Dockerfile",
+      "managerFilePatterns": [
+        "windows/Dockerfile"
+      ],
+      "matchStrings": [
+        "ARG BUILDKIT_VERSION=(?<currentValue>[\\w\\.-]+)"
+      ],
+      "depNameTemplate": "moby/buildkit",
+      "datasourceTemplate": "github-releases",
+      "extractVersionTemplate": "^v?(?<version>.+)$"
+    },
+    {
+      "customType": "regex",
+      "description": "Update Windows CNI plugin version in Windows Dockerfile",
+      "managerFilePatterns": [
+        "windows/Dockerfile"
+      ],
+      "matchStrings": [
+        "ARG CNI_PLUGIN_VERSION=(?<currentValue>[\\w\\.-]+)"
+      ],
+      "depNameTemplate": "microsoft/windows-container-networking",
+      "datasourceTemplate": "github-releases",
+      "extractVersionTemplate": "^v?(?<version>.+)$"
     }
   ]
 }
