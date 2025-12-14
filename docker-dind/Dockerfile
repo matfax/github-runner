@@ -25,10 +25,18 @@ RUN Set-ExecutionPolicy Bypass -Scope Process -Force; `
     C:/install_choco.ps1; `
     Remove-Item C:/install_choco.ps1 -Force
 
-RUN "[Environment]::SetEnvironmentVariable('PATH', 'C:\ProgramData\chocolatey\bin'+$env:PATH, [EnvironmentVariableTarget]::Machine)"
+RUN "[Environment]::SetEnvironmentVariable('PATH', Join-Path $env:ProgramData 'chocolatey' 'bin') + [IO.Path]::PathSeparator + $env:PATH, [EnvironmentVariableTarget]::Machine)"
 
-# Install Docker Engine (includes both dockerd and docker CLI)
-RUN choco install docker-engine -y --version 28.3.1
+# Install Docker Engine (download static binaries directly, no service needed)
+ARG DOCKERD_GITHUB_VERSION=28.3.1 # repository: moby/moby
+ADD https://download.docker.com/win/static/stable/x86_64/docker-${DOCKERD_GITHUB_VERSION}.zip C:/docker-binaries.zip
+RUN Expand-Archive -Path C:/docker-binaries.zip -DestinationPath C:\docker-extract -Force; `
+    New-Item -ItemType Directory -Path (Join-Path $env:ProgramFiles 'docker') -Force; `
+    Move-Item -Path (Join-Path "C:\docker-extract" "docker" "*") -Destination (Join-Path $env:ProgramFiles 'docker') -Force; `
+    Remove-Item C:/docker-binaries.zip -Force; `
+    Remove-Item C:\docker-extract -Recurse -Force
+
+RUN "[Environment]::SetEnvironmentVariable('PATH', Join-Path $env:ProgramFiles 'docker') + [IO.Path]::PathSeparator + $env:PATH, [EnvironmentVariableTarget]::Machine)"
 
 # Configure Docker daemon for TCP
 RUN mkdir C:\docker-config

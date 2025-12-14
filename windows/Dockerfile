@@ -26,7 +26,7 @@ RUN Set-ExecutionPolicy Bypass -Scope Process -Force; `
     C:/install_choco.ps1; `
     Remove-Item C:/install_choco.ps1 -Force
 
-RUN "[Environment]::SetEnvironmentVariable('PATH', 'C:\\ProgramData\\chocolatey\\bin;'+$env:PATH, [EnvironmentVariableTarget]::Machine)"
+RUN "[Environment]::SetEnvironmentVariable('PATH', Join-Path $env:ProgramData 'chocolatey' 'bin') + [IO.Path]::PathSeparator + $env:PATH, [EnvironmentVariableTarget]::Machine)"
 
 # Install PowerShell Core and core tools
 RUN choco install powershell-core -y --version 7.5.0
@@ -62,10 +62,10 @@ RUN Write-Host "Installing containerd v${CONTAINERD_GITHUB_VERSION}..."; `
     New-Item -ItemType Directory -Force -Path $containerdRoot | Out-Null; `
     tar.exe xvf C:\containerd.tar.gz -C $containerdRoot; `
     Remove-Item C:\containerd.tar.gz -Force; `
-    New-Item -ItemType Directory -Force -Path (Join-Path $containerdRoot 'cni\bin') | Out-Null; `
-    New-Item -ItemType Directory -Force -Path (Join-Path $containerdRoot 'cni\conf') | Out-Null
+    New-Item -ItemType Directory -Force -Path (Join-Path $containerdRoot 'cni' 'bin') | Out-Null; `
+    New-Item -ItemType Directory -Force -Path (Join-Path $containerdRoot 'cni' 'conf') | Out-Null
 
-RUN "[Environment]::SetEnvironmentVariable('PATH', ($env:ProgramFiles + '\\containerd\\bin;') + $env:PATH, [EnvironmentVariableTarget]::Machine)"
+RUN "[Environment]::SetEnvironmentVariable('PATH', Join-Path $env:ProgramFiles 'containerd' 'bin') + [IO.Path]::PathSeparator + $env:PATH, [EnvironmentVariableTarget]::Machine)"
 
 # Install BuildKit
 ADD https://github.com/moby/buildkit/releases/download/v${BUILDKIT_GITHUB_VERSION}/buildkit-v${BUILDKIT_GITHUB_VERSION}.windows-amd64.tar.gz C:/buildkit.tar.gz
@@ -75,7 +75,7 @@ RUN Write-Host "Installing BuildKit v${BUILDKIT_GITHUB_VERSION}..."; `
     tar.exe xvf C:\buildkit.tar.gz -C $buildkitRoot; `
     Remove-Item C:\buildkit.tar.gz -Force
 
-RUN "[Environment]::SetEnvironmentVariable('PATH', ($env:ProgramFiles + '\\buildkit\\bin;') + $env:PATH, [EnvironmentVariableTarget]::Machine)"
+RUN "[Environment]::SetEnvironmentVariable('PATH', Join-Path $env:ProgramFiles 'buildkit' 'bin') + [IO.Path]::PathSeparator + $env:PATH, [EnvironmentVariableTarget]::Machine)"
 
 # Install CNI plugins
 ADD https://github.com/microsoft/windows-container-networking/releases/download/v${CNI_GITHUB_VERSION}/windows-container-networking-cni-amd64-v${CNI_GITHUB_VERSION}.zip C:/cni-plugins.zip
