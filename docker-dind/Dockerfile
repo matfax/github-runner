@@ -37,7 +37,6 @@ COPY daemon.json C:/docker-config/daemon.json
 EXPOSE 2375
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 `
-  CMD powershell -Command "& { try { docker version; exit $LASTEXITCODE } catch { exit 1 } }"
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 CMD docker version
 
 CMD ["dockerd", "--config-file=C:\\docker-config\\daemon.json"]
