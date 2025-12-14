@@ -1,0 +1,106 @@
+replicaCount: 1
+
+image:
+  repository: ghcr.io/matfax/github-runner/docker-dind
+  pullPolicy: IfNotPresent
+  tag: ""
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+service:
+  type: ClusterIP
+  port: 2375
+  targetPort: 2375
+  annotations: {}
+
+# Docker daemon configuration
+docker:
+  # TCP host binding
+  host: "tcp://0.0.0.0:2375"
+  # Insecure registries (private registry access)
+  insecureRegistries:
+    - "10.0.0.0/8"
+    - "172.16.0.0/12"
+    - "192.168.0.0/16"
+  # Additional daemon options
+  extraArgs: []
+
+# Resource requests and limits
+resources:
+  limits:
+    cpu: 2000m
+    memory: 4Gi
+  requests:
+    cpu: 500m
+    memory: 1Gi
+
+# Node selector for Windows nodes
+nodeSelector:
+  kubernetes.io/os: windows
+  kubernetes.io/arch: amd64
+
+# Tolerations for Windows nodes
+tolerations:
+  - key: "os"
+    operator: "Equal"
+    value: "windows"
+    effect: "NoSchedule"
+
+# Affinity for scheduling
+affinity: {}
+
+# Pod security context - DinD requires privileged
+podSecurityContext: {}
+
+# Security context - privileged required for DinD
+securityContext:
+  privileged: true
+
+# Liveness probe - using Docker API health check
+livenessProbe:
+  tcpSocket:
+    port: 2375
+  initialDelaySeconds: 60
+  periodSeconds: 30
+  timeoutSeconds: 10
+  successThreshold: 1
+  failureThreshold: 3
+
+# Readiness probe
+readinessProbe:
+  tcpSocket:
+    port: 2375
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  successThreshold: 1
+  failureThreshold: 3
+
+# Service account configuration
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+# Pod annotations
+podAnnotations: {}
+
+# Pod labels
+podLabels: {}
+
+# Persistence for Docker data (optional)
+persistence:
+  enabled: false
+  existingClaim: ""
+  storageClass: ""
+  accessMode: ReadWriteOnce
+  size: 50Gi
+  mountPath: C:/var/lib/docker
+
+# Network policy
+networkPolicy:
+  enabled: false
+  ingress: []
+  egress: []

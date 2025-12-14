@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "windows-docker-dind.fullname" . }}
+  labels:
+    {{- include "windows-docker-dind.labels" . | nindent 4 }}
+data:
+  daemon.json: |
+    {
+      "hosts": [{{ .Values.docker.host | quote }}],
+      "insecure-registries": {{ .Values.docker.insecureRegistries | toJson }}
+      {{- if .Values.docker.extraArgs }}
+      ,
+      {{- range $index, $arg := .Values.docker.extraArgs }}
+      {{- if $index }},{{ end }}
+      {{- $arg | nindent 6 }}
+      {{- end }}
+      {{- end }}
+    }

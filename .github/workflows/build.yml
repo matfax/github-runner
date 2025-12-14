@@ -80,15 +80,26 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
+            context: linux
             platform: linux
             tag: ubuntu
             registry: runner
             buildkit: true
+            test: true
           - os: ${{ github.run_attempt > 1 && 'windows-latest' || 'windows-runner-set' }}
+            context: windows
             platform: windows
             tag: windows
             registry: runner
             buildkit: ${{ github.run_attempt == 1 }}
+            test: true
+          - os: ${{ github.run_attempt > 1 && 'windows-latest' || 'windows-runner-set' }}
+            context: dind-runner
+            platform: windows
+            tag: windows
+            registry: dind-runner
+            buildkit: ${{ github.run_attempt == 1 }}
+            test: false
           
     runs-on: ${{ matrix.os }}
     env:
@@ -118,21 +129,21 @@ jobs:
           driver: ${{ matrix.buildkit && 'docker-container' || 'docker' }}
 
       - name: Build Multi-Arch Docker Image (using Buildx)
-        if: matrix.buildkit
+        if: matrix.buildkit && matrix.test
         uses: docker/build-push-action@v6
         with:
-          context: ${{ matrix.platform }}
+          context: ${{ matrix.context }}
           tags: ${{ env.TEST_TAG }}
           platforms: ${{ env.PLATFORMS }}
           cache-from: type=registry,ref=${{ env.DOCKER_REPO }}${{ matrix.registry }}:buildcache-${{ matrix.platform }}
           cache-to: type=gha,mode=max
       
       - name: Load Docker Image (using Buildx)
-        if: matrix.buildkit
+        if: matrix.buildkit && matrix.test
         uses: docker/build-push-action@v6
         with:
           load: true
-          context: ${{ matrix.platform }}
+          context: ${{ matrix.context }}
           tags: ${{ env.TEST_TAG }}
           cache-from: type=gha
       
@@ -141,10 +152,11 @@ jobs:
         shell: pwsh
         run: |
           docker pull ${{ env.DOCKER_REPO }}${{ matrix.registry }}:${{ matrix.tag }} || echo "No cache platform found"
-          docker build -t "${{ env.TEST_TAG }}" ${{ matrix.platform }}
+          docker build -t "${{ env.TEST_TAG }}" ${{ matrix.context }}
 
       - name: Decode registration token
         id: decoded-reg-token
+        if: matrix.test
         shell: pwsh
         env:
           SECRET: ${{ secrets.SYM_ENC }}
@@ -167,16 +179,18 @@ jobs:
           "out=$plain" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
 
       - name: Start runner via launch script
+        if: matrix.test
         shell: pwsh
         run: |
           $regToken = "${{ steps.decoded-reg-token.outputs.out }}"
           if (-not $regToken) { throw "REG_TOKEN missing" }
           . ./launch.ps1
-          $labels = "self-hosted,${{ matrix.platform }},docker,run-${{ github.run_id }}"
+          $labels = "self-hosted,${{ matrix.context }},docker,run-${{ github.run_id }}"
           $repoObj = [pscustomobject]@{ full_name = "${{ github.repository }}"; html_url = "https://github.com/${{ github.repository }}" }
           Start-Runner -Repo $repoObj -RegToken $regToken -ComposeProject "${{ env.TEST_PROJECT }}" -Platform "${{ matrix.platform }}" -RunnerIdleTimeoutMinutes $env:RUNNER_IDLE_TIMEOUT_MINUTES -RunnerMaxRestarts $env:RUNNER_MAX_RESTARTS -RunnerLabels $labels -RunnerImage "${{ env.TEST_TAG }}" -RunnerName "${{ env.TEST_PROJECT }}" -WithWsl:$false
 
       - name: Ensure runner container is running
+        if: matrix.test
         shell: pwsh
         run: |
           $deadline = (Get-Date).AddMinutes(2)
@@ -223,6 +237,7 @@ jobs:
           }
 
       - name: Check runner logs for readiness
+        if: matrix.test
         shell: pwsh
         run: |
           function Get-ContainerId {
@@ -257,22 +272,25 @@ jobs:
           }
 
       - name: Wait for self-hosted jobs
+        if: matrix.test
         uses: yogeshlonkar/wait-for-jobs@v0.4.9
         with:
-          jobs: "Integrated Runner Test (${{ matrix.platform }})"
+          jobs: "Integrated Runner Test (${{ matrix.context }})"
           ignore-skipped: 'false'
           ttl: '2'
 
       - name: Push Docker Image (with Buildx)
         uses: docker/build-push-action@v6
         if: matrix.buildkit && (github.event_name == 'release' || github.event_name == 'push' || github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.ref_name == 'main'))
+        env:
+          REGISTRY_REF: registry,ref=${{ env.DOCKER_REPO }}${{ matrix.registry }}:buildcache-${{ matrix.platform }}
         with:
           push: true
-          context: ${{ matrix.platform }}
+          context: ${{ matrix.context }}
           tags: "${{ env.DOCKER_REPO }}${{ matrix.registry }}:${{ env.DOCKER_RELEASE_PREFIX_OPT }}${{ matrix.tag }}"
           platforms: ${{ env.PLATFORMS }}
-          cache-from: type=gha
-          cache-to: type=registry,ref=${{ env.DOCKER_REPO }}${{ matrix.registry }}:buildcache-${{ matrix.platform }},mode=max
+          cache-from: type=${{ matrix.test && 'gha' || env.REGISTRY_REF }}
+          cache-to: type=${{ env.REGISTRY_REF }},mode=max
           
       - name: Push Docker Image (without Buildx)
         if: matrix.buildkit == false && (github.event_name == 'release' || github.event_name == 'push' || github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.ref_name == 'main'))

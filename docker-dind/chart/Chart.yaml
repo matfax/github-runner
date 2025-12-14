@@ -1,0 +1,17 @@
+apiVersion: v2
+name: windows-docker-dind
+description: Windows Docker-in-Docker service with TCP endpoint
+type: application
+version: 0.1.0
+appVersion: "25.0.3" # repository: docker/docker-ce
+keywords:
+  - docker
+  - dind
+  - windows
+  - tcp
+home: https://github.com/matfax/github-runner
+sources:
+  - https://github.com/matfax/github-runner/tree/main/docker-dind
+maintainers:
+  - name: matfax
+    email: mat@fax.fyi

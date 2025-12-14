@@ -1,0 +1,35 @@
+{{- $serviceFullName := include "windows-docker-dind.fullname" . -}}
+{{- $servicePort := .Values.service.port -}}
+
+Windows Docker-in-Docker service installed!
+
+To use this Docker daemon from your applications:
+
+1. Set the DOCKER_HOST environment variable:
+
+   export DOCKER_HOST=tcp://{{ $serviceFullName }}:{{ $servicePort }}
+
+2. Test the connection:
+
+   docker version
+
+3. Use Docker normally:
+
+   docker run --rm hello-world
+   docker build -t myapp:tag .
+
+Service Details:
+- Service: {{ $serviceFullName }}
+- Namespace: {{ .Release.Namespace }}
+- Type: {{ .Values.service.type }}
+- Port: {{ $servicePort }}
+
+{{- if eq .Values.service.type "ClusterIP" }}
+Note: Service is ClusterIP. Ensure your Docker client is running within the cluster or has network access.
+{{- end }}
+
+{{- if .Values.persistence.enabled }}
+Docker data will be persisted at: {{ .Values.persistence.mountPath }}
+{{- else }}
+Docker data is ephemeral and will be lost on pod restart.
+{{- end }}
