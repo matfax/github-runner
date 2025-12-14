@@ -1,7 +1,7 @@
 # escape=`
 
 # Use Windows Server Core as base
-FROM mcr.microsoft.com/windows/servercore:ltsc2022
+FROM mcr.microsoft.com/powershell:lts-windowsservercore-ltsc2022
 
 # Metadata
 LABEL org.opencontainers.image.source="https://github.com/matfax/github-runner"
@@ -11,7 +11,7 @@ LABEL org.opencontainers.image.title="Windows Docker-in-Docker Service"
 LABEL org.opencontainers.image.description="Docker-in-Docker for Windows with TCP endpoint"
 LABEL org.opencontainers.image.base.name="mcr.microsoft.com/windows/servercore:ltsc2022"
 
-SHELL ["powershell", "-Command", "$ErrorActionPreference = 'Stop'; $ProgressPreference = 'SilentlyContinue';"]
+SHELL ["pwsh", "-Command", "$ErrorActionPreference = 'Stop'; $ProgressPreference = 'SilentlyContinue';"]
 
 # Install Chocolatey
 ADD https://community.chocolatey.org/install.ps1 C:/install_choco.ps1

@@ -26,7 +26,7 @@ RUN Set-ExecutionPolicy Bypass -Scope Process -Force; `
     C:/install_choco.ps1; `
     Remove-Item C:/install_choco.ps1 -Force
 
-RUN "[Environment]::SetEnvironmentVariable('PATH', (Join-Path $env:ProgramData 'chocolatey' 'bin') + [IO.Path]::PathSeparator + $env:PATH, [EnvironmentVariableTarget]::Machine)
+RUN "[Environment]::SetEnvironmentVariable('PATH', (Join-Path (Join-Path $env:ProgramData 'chocolatey') 'bin') + [IO.Path]::PathSeparator + $env:PATH, [EnvironmentVariableTarget]::Machine)
 
 # Install PowerShell Core and core tools
 RUN choco install powershell-core -y --version 7.5.0
