@@ -1,4 +1,4 @@
-# escape=` `
+# escape=`
 
 # Use Windows Server Core as base
 FROM mcr.microsoft.com/windows/servercore:ltsc2022
