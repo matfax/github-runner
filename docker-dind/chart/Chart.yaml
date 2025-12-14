@@ -3,7 +3,7 @@ name: windows-docker-dind
 description: Windows Docker-in-Docker service with TCP endpoint
 type: application
 version: 0.1.0
-appVersion: "25.0.3" # repository: docker/docker-ce
+appVersion: "28.3.1"
 keywords:
   - docker
   - dind

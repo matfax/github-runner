@@ -13,7 +13,8 @@
     {
       "customType": "regex",
       "managerFilePatterns": [
-        "windows/Dockerfile"
+        "windows/Dockerfile",
+        "docker-dind/Dockerfile"
       ],
       "matchStrings": [
         "choco install (?<depName>\\S+)[^\\r\\n]*?(--?\\w+[^\\r\\n]+)*--version[= ](?<currentValue>\\S+)"
@@ -45,6 +46,40 @@
       ],
       "datasourceTemplate": "github-releases",
       "extractVersionTemplate": "^v?(\\?<version>.+)$"
+    },
+    {
+      "customType": "regex",
+      "description": "Update docker-engine version in build.yml",
+      "managerFilePatterns": [
+        ".github/workflows/build.yml"
+      ],
+      "matchStrings": [
+        "DOCKERD_VERSION:\\s*(?<currentValue>[^\\s#]+)"
+      ],
+      "datasourceTemplate": "nuget",
+      "depNameTemplate": "docker-engine",
+      "registryUrlTemplate": "https://community.chocolatey.org/api/v2/",
+      "versioningTemplate": "nuget"
+    },
+    {
+      "customType": "regex",
+      "description": "Update docker-engine appVersion in Helm Chart.yaml to match choco package",
+      "managerFilePatterns": [
+        "docker-dind/chart/Chart.yaml"
+      ],
+      "matchStrings": [
+        "appVersion:\\s*\"(?<currentValue>[^\"]+)\""
+      ],
+      "datasourceTemplate": "nuget",
+      "depNameTemplate": "docker-engine",
+      "registryUrlTemplate": "https://community.chocolatey.org/api/v2/",
+      "versioningTemplate": "nuget"
+    }
+  ],
+  "packageRules": [
+    {
+      "matchDepNames": ["docker-engine"],
+      "groupName": "docker-engine version"
     }
   ]
 }
