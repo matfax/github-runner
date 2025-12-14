@@ -94,7 +94,7 @@ jobs:
             buildkit: ${{ github.run_attempt == 1 }}
             test: true
           - os: ${{ github.run_attempt > 1 && 'windows-latest' || 'windows-runner-set' }}
-            context: dind-runner
+            context: docker-dind
             platform: windows
             tag: windows
             registry: dind-runner
