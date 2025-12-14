@@ -56,29 +56,27 @@
       "matchStrings": [
         "DOCKERD_VERSION:\\s*(?<currentValue>[^\\s#]+)"
       ],
-      "datasourceTemplate": "nuget",
-      "depNameTemplate": "docker-engine",
-      "registryUrlTemplate": "https://community.chocolatey.org/api/v2/",
-      "versioningTemplate": "nuget"
+      "datasourceTemplate": "github-releases",
+      "depNameTemplate": "moby/moby",
+      "extractVersionTemplate": "^v?(?<version>.+)$"
     },
     {
       "customType": "regex",
-      "description": "Update docker-engine appVersion in Helm Chart.yaml to match choco package",
+      "description": "Update docker-engine appVersion in Helm Chart.yaml from GitHub releases",
       "managerFilePatterns": [
         "docker-dind/chart/Chart.yaml"
       ],
       "matchStrings": [
         "appVersion:\\s*\"(?<currentValue>[^\"]+)\""
       ],
-      "datasourceTemplate": "nuget",
-      "depNameTemplate": "docker-engine",
-      "registryUrlTemplate": "https://community.chocolatey.org/api/v2/",
-      "versioningTemplate": "nuget"
+      "datasourceTemplate": "github-releases",
+      "depNameTemplate": "moby/moby",
+      "extractVersionTemplate": "^v?(?<version>.+)$"
     }
   ],
   "packageRules": [
     {
-      "matchDepNames": ["docker-engine"],
+      "matchDepNames": ["moby/moby"],
       "groupName": "docker-engine version"
     }
   ]
