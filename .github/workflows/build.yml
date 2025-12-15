@@ -22,8 +22,8 @@ concurrency:
   group: build-${{ github.workflow_sha }}-${{ github.ref }}
 
 env:
-  RUNNER_IDLE_TIMEOUT_MINUTES: 5
-  RUNNER_MAX_RESTARTS: 1
+  RUNNER_IDLE_TIMEOUT_MINUTES: ${{ vars.RUNNER_IDLE_TIMEOUT_MINUTES || '5' }}
+  RUNNER_MAX_RESTARTS: ${{ vars.RUNNER_MAX_RESTARTS || '2' }}
   DOCKER_REPO: ghcr.io/${{ github.repository }}/
   DOCKER_RELEASE_PREFIX_OPT: ${{ github.event_name == 'release' && github.event.release.tag_name || '' }}${{ github.event_name == 'release' && '-' || '' }}
 
@@ -453,8 +453,8 @@ jobs:
       contents: write
     environment: connect
     env:
-      CR_PASSPHRASE_FILE: .cr-gpg/passphrase
-      CR_KEYRING: .cr-gpg/secring.gpg
+      CR_PASSPHRASE_FILE: ${{ vars.CR_KEYDIR }}/passphrase
+      CR_KEYRING: ${{ vars.CR_KEYDIR }}/secring.gpg
     steps:
       - name: Checkout
         uses: actions/checkout@v5.0.0
@@ -479,6 +479,7 @@ jobs:
 
       - name: Prepare GPG Keyring
         run: |
+          mkdir -pv ${{ vars.CR_KEYDIR }}
           base64 -d <<< "${{ steps.load-secrets.outputs.CR_KEYFILE }}" > "${{ env.CR_KEYRING }}"
           echo "${{ steps.load-secrets.outputs.CR_PASSPHRASE }}" > "${{ env.CR_PASSPHRASE_FILE }}"
 
