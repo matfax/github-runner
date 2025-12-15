@@ -5,6 +5,7 @@
       "enabled": true
     }
   },
+  "containerd": "\\\\.\\pipe\\containerd-containerd",
   "hosts": ["tcp://0.0.0.0:2375"],
   "insecure-registries": ["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"]
 }

@@ -63,6 +63,8 @@ spec:
             - name: docker-data
               mountPath: {{ .Values.persistence.mountPath }}
             {{- end }}
+            - name: containerd-pipe
+              mountPath: \\.\pipe\containerd-containerd
       volumes:
         - name: docker-config
           configMap:
@@ -77,3 +79,7 @@ spec:
             claimName: {{ include "windows-docker-dind.fullname" . }}
           {{- end }}
         {{- end }}
+        - name: containerd-pipe
+          hostPath:
+            path: \\.\pipe\containerd-containerd
+            type: null

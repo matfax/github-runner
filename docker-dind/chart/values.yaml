@@ -61,9 +61,11 @@ affinity: {}
 # Pod security context - DinD requires privileged
 podSecurityContext: {}
 
-# Security context - privileged required for DinD
+# Security context - Windows hostProcess for accessing host containerd
 securityContext:
-  privileged: true
+  windowsOptions:
+    hostProcess: true
+    runAsUserName: "NT AUTHORITY\\SYSTEM"
 
 # Liveness probe - using Docker API health check
 livenessProbe:

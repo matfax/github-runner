@@ -1,44 +1,41 @@
 # Windows Docker-in-Docker Service
 
-Windows Docker-in-Docker service that provides a TCP endpoint for Docker API access without requiring socket mounting or host Docker access.
+Docker daemon that exposes a TCP endpoint for Docker API access using the host's containerd runtime. Designed for GitHub Actions runners on AKS Edge and Windows Kubernetes clusters.
 
 ## Overview
 
-This service runs the Docker daemon (`dockerd`) on Windows, exposing a TCP endpoint (port 2375) that can be used by GitHub Actions runners or other applications to run Docker containers without needing access to the host Docker socket.
+This service provides Docker API access via TCP port 2375 by running a Docker daemon that connects to the host's containerd runtime. It uses Windows hostProcess containers to mount the containerd named pipe from the host, enabling Docker commands without nested containerization.
 
-## Docker Build
+**Key features:**
+- Uses host containerd runtime via `\\.\pipe\containerd-containerd`
+- Exposes standard Docker TCP API on port 2375
+- Compatible with AKS Edge and Windows Kubernetes
+- Configurable builder garbage collection
 
-Build the image:
-
-```bash
-cd docker-dind
-docker build -t ghcr.io/matfax/github-runner/docker-dind:latest .
-
-# Also tag with specific version (appVersion)
-docker build -t ghcr.io/matfax/github-runner/docker-dind:25.0.3 .
-```
-
-## Kubernetes Deployment with Helm
+## Installation
 
 ### Prerequisites
 
-- Kubernetes cluster with Windows node pool
-- Windows Server 2022 LTSC nodes
-- Containers feature enabled on Windows nodes
+- AKS Edge or Kubernetes cluster with Windows node pool
+- Windows hostProcess container support (Kubernetes 1.23+)
+- Helm 3.x
 
-### Helm Installation
+### Option 1: Install from Helm Repository
 
 ```bash
-# Install from chart directory
-helm install windows-docker-dind ./chart \
+helm repo add github-runner https://matfax.github.io/github-runner
+helm repo update
+helm install docker-dind github-runner/docker-dind \
   --namespace docker-dind \
   --create-namespace
+```
 
-# With custom configuration
-helm install windows-docker-dind ./chart \
+### Option 2: Install from Local Chart
+
+```bash
+helm install docker-dind ./chart \
   --namespace docker-dind \
-  --set service.type=LoadBalancer \
-  --set resources.limits.memory=8Gi
+  --create-namespace
 ```
 
 ### Helm Values
@@ -83,6 +80,12 @@ tolerations:
     value: "windows"
     effect: "NoSchedule"
 
+# Security context for host containerd access
+securityContext:
+  windowsOptions:
+    hostProcess: true
+    runAsUserName: "NT AUTHORITY\\SYSTEM"
+
 # Persistence for Docker data
 persistence:
   enabled: false
@@ -99,74 +102,19 @@ When launching your GitHub Actions runner containers, set:
 ```yaml
 env:
   - name: DOCKER_HOST
-    value: tcp://windows-docker-dind:2375
+    value: tcp://docker-dind:2375
 ```
 
 ### Option 2: Using docker context
 
 ```bash
-docker context create remote-windows --docker host=tcp://windows-docker-dind:2375
+docker context create remote-windows --docker host=tcp://docker-dind:2375
 docker context use remote-windows
-```
-
-## Build and Release Process
-
-### Versioning
-
-This image follows Docker CE versioning:
-
-1. **Dockerfile** uses `ARG DOCKER_GITHUB_VERSION` with a renovate comment:
-   ```dockerfile
-   ARG DOCKER_GITHUB_VERSION=25.0.3 # repository: docker/docker-ce
-   ```
-
-2. **Chart.yaml** uses the same version via renovate comment:
-   ```yaml
-   appVersion: "25.0.3" # repository: docker/docker-ce
-   ```
-
-3. Renovate automatically updates both when new Docker releases are published.
-
-### Building for Release
-
-```bash
-cd docker-dind
-
-# Get version from Dockerfile
-DOCKER_VERSION=$(grep "DOCKER_GITHUB_VERSION" Dockerfile | cut -d'=' -f2 | cut -d' ' -f1)
-
-# Build and push both tags
-docker build -t ghcr.io/matfax/github-runner/docker-dind:latest .
-docker build -t ghcr.io/matfax/github-runner/docker-dind:${DOCKER_VERSION} .
-docker push ghcr.io/matfax/github-runner/docker-dind:latest
-docker push ghcr.io/matfax/github-runner/docker-dind:${DOCKER_VERSION}
-```
-
-### CI/CD Integration
-
-In your GitHub Actions workflow:
-
-```yaml
-- name: Extract Docker version
-  id: version
-  run: |
-    DOCKER_VERSION=$(grep "DOCKER_GITHUB_VERSION" docker-dind/Dockerfile | cut -d'=' -f2 | cut -d' ' -f1)
-    echo "version=${DOCKER_VERSION}" >> $GITHUB_OUTPUT
-
-- name: Build and push
-  uses: docker/build-push-action@v5
-  with:
-    context: docker-dind
-    platforms: windows/amd64
-    push: true
-    tags: |
-      ghcr.io/matfax/github-runner/docker-dind:latest
-      ghcr.io/matfax/github-runner/docker-dind:${{ steps.version.outputs.version }}
 ```
 
 ## Security Considerations
 
-- **Privileged Mode**: Docker-in-Docker requires privileged mode. Ensure proper RBAC and network policies.
+- **Windows hostProcess**: The service runs as `NT AUTHORITY\\SYSTEM` with `hostProcess: true` to access the host's containerd named pipe.
 - **Network Access**: The TCP endpoint should be restricted to trusted applications within the cluster.
 - **No TLS**: By default, TLS is disabled. For production, consider adding TLS certificates.
 - **Use NetworkPolicies**: Restrict which pods can access the Docker daemon:
@@ -179,7 +127,7 @@ metadata:
 spec:
   podSelector:
     matchLabels:
-      app: windows-docker-dind
+      app: docker-dind
   policyTypes:
     - Ingress
   ingress:
@@ -200,20 +148,20 @@ spec:
 ### Check Docker daemon logs
 
 ```bash
-kubectl logs -f deployment/windows-docker-dind -n docker-dind
+kubectl logs -f deployment/docker-dind -n docker-dind
 ```
 
 ### Test connectivity from a pod
 
 ```bash
-kubectl run -i --tty --rm debug --image=mcr.microsoft.com/windows/nanoserver:ltsc2022 --restart=Never -- nslookup windows-docker-dind
+kubectl run -i --tty --rm debug --image=mcr.microsoft.com/windows/nanoserver:ltsc2022 --restart=Never -- nslookup docker-dind
 ```
 
 ### Verify Docker API
 
 ```bash
 # Port-forward for local testing
-kubectl port-forward svc/windows-docker-dind 2375:2375 -n docker-dind
+kubectl port-forward svc/docker-dind 2375:2375 -n docker-dind
 
 # Test from local machine
 docker -H tcp://localhost:2375 version
@@ -222,9 +170,9 @@ docker -H tcp://localhost:2375 version
 ### Common Issues
 
 1. **Port access denied**: Ensure Windows Defender/Firewall allows port 2375
-2. **Privileged mode error**: Verify cluster allows privileged containers
+2. **hostProcess errors**: Verify Windows hostProcess containers are enabled on the node
 3. **Image pull errors**: Ensure Windows nodes can access container registry
-4. **Storage issues**: Enable persistence or increase disk space
+4. **Containerd pipe access**: Verify the containerd named pipe `\\\\.\\pipe\\containerd-containerd` exists on the host
 
 ## Integration with GitHub ARC
 
@@ -238,7 +186,7 @@ spec:
         - name: runner
           env:
             - name: DOCKER_HOST
-              value: tcp://windows-docker-dind.docker-dind.svc.cluster.local:2375
+              value: tcp://docker-dind.docker-dind.svc.cluster.local:2375
 ```
 
 This enables docker commands in workflows without socket mounting.

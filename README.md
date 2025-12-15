@@ -2,6 +2,10 @@
 
 PowerShell watcher that detects queued self-hosted jobs across your admin repos and spins up Windows runner containers. Includes an optional WSL-hosted cache server shared across all runners.
 
+Supports Windows runners via:
+- Docker Desktop with Windows containers (traditional)
+- AKS Edge with Windows hostProcess containers (using host containerd)
+
 ## Prerequisites
 - PowerShell 7+ (for built-in `ConvertFrom-Yaml`) or `Install-Module powershell-yaml`
 - Docker Desktop with Windows containers
@@ -83,7 +87,9 @@ PowerShell watcher that detects queued self-hosted jobs across your admin repos 
 - Reads settings from `config.yml`; fetches the GitHub PAT on-demand from 1Password Connect each poll cycle and discards it after use.
 - Starts the 1Password Connect stack and cache server in WSL (compose in `connect/` and `caching/`) once, shared for all runners.
 - Watches admin repos (optionally filtered) for queued self-hosted jobs:
-  - `windowsLabelRegex` → Windows runner via host Docker (image `ghcr.io/matfax/github-runner/runner:windows`, compose file `windows/docker-compose.yml`).
+  - `windowsLabelRegex` → Windows runner via:
+    - Docker Desktop: image `ghcr.io/matfax/github-runner/runner:windows`, compose file `windows/docker-compose.yml`
+    - AKS Edge: image `ghcr.io/matfax/github-runner/runner:windows`, Helm chart `github-runner/docker-dind`
   - `linuxLabelRegex` → Linux runner via WSL Docker (image `ghcr.io/matfax/github-runner/runner:ubuntu`, compose file `linux/docker-compose.yml`).
 - Registration tokens are only set in the runner containers during initial configuration and are cleared before the runner starts processing jobs (`REG_TOKEN` is unset in the start scripts). Idle timeout (`runnerIdleTimeoutMinutes` / env `RUNNER_IDLE_TIMEOUT_MINUTES`) is enforced by both start scripts; idle runners exit cleanly so compose can recreate when needed.
   `runnerMaxRestarts` / env `RUNNER_MAX_RESTARTS` limits restart attempts for non-idle exits.
