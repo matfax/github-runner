@@ -452,6 +452,9 @@ jobs:
     permissions:
       contents: write
     environment: connect
+    env:
+      CR_PASSPHRASE_FILE: .cr-gpg/passphrase
+      CR_KEYRING: .cr-gpg/secring.gpg
     steps:
       - name: Checkout
         uses: actions/checkout@v5.0.0
@@ -473,13 +476,11 @@ jobs:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
           CR_KEYFILE: ${{ vars.CR_KEYFILE }}
           CR_PASSPHRASE: ${{ vars.CR_PASSPHRASE }}
-      
-      - name: Import GPG Key
-        id: import-gpg
-        uses: crazy-max/ghaction-import-gpg@v6.3.0
-        with:
-          gpg_private_key: ${{ steps.load-secrets.outputs.CR_KEYFILE }}
-          passphrase: ${{ steps.load-secrets.outputs.CR_PASSPHRASE }}
+
+      - name: Prepare GPG Keyring
+        run: |
+          base64 -d <<< "${{ steps.load-secrets.outputs.CR_KEYFILE }}" > "${{ env.CR_KEYRING }}"
+          echo "${{ steps.load-secrets.outputs.CR_PASSPHRASE }}" > "${{ env.CR_PASSPHRASE_FILE }}"
 
       - name: Run chart-releaser
         uses: helm/chart-releaser-action@v1.6.0
@@ -487,10 +488,8 @@ jobs:
           charts_dir: charts
           config: cr.yaml
         env:
-          CR_TOKEN: "${{ github.token }}"
-          CR_KEY: "${{ steps.import-gpg.outputs.keyid }}"
+          CR_TOKEN: ${{ github.token }}
           CR_SIGN: true
-          CR_KEYRING: ~/.gnupg/secring.gpg
 
   complete:
     name: Complete Workflow

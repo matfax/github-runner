@@ -1,3 +1,5 @@
 ﻿owner: matfax
 git-repo: github-runner
 generate-notes: true
+sign: true
+key: Matthias Fax
