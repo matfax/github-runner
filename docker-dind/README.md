@@ -23,19 +23,17 @@ This service provides Docker API access via TCP port 2375 by running a Docker da
 ### Option 1: Install from Helm Repository
 
 ```bash
-helm repo add github-runner https://matfax.github.io/github-runner
+helm repo add github-runner https://runner.actions.fyi
 helm repo update
 helm install docker-dind github-runner/docker-dind \
-  --namespace docker-dind \
-  --create-namespace
+  --namespace github-arc
 ```
 
 ### Option 2: Install from Local Chart
 
 ```bash
 helm install docker-dind ./chart \
-  --namespace docker-dind \
-  --create-namespace
+  --namespace github-arc
 ```
 
 ### Helm Values
