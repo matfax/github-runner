@@ -3,7 +3,14 @@ name: Build and Test
 on:
   push:
     branches: [ main ]
+    paths-ignore:
+      - '**.md'
+      - 'renovate.json'
   pull_request:
+    branches: [ main ]
+    paths-ignore:
+      - '**.md'
+      - 'renovate.json'
   release:
     types: [ published ]
   schedule:
