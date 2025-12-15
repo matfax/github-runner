@@ -418,10 +418,10 @@ jobs:
             echo "result=${{ needs.merge.result }}" >> "$GITHUB_OUTPUT"
           fi
 
-  test-charts:
+  lint-charts:
     name: Test Helm Charts
     runs-on: ubuntu-latest
-    needs: tag
+    needs: build
     permissions:
       contents: read
     steps:
@@ -446,7 +446,7 @@ jobs:
 
   release-charts:
     name: Release Helm Charts
-    needs: test-charts
+    needs: lint-charts
     if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.ref_name == 'main')
     runs-on: ubuntu-latest
     permissions:
@@ -498,7 +498,7 @@ jobs:
       - merge-status
       - cleanup-runners
       - build
-      - test-charts
+      - lint-charts
     environment: completion
     runs-on: ubuntu-latest
     permissions:
