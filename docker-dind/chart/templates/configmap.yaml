@@ -5,9 +5,9 @@ metadata:
   labels:
     {{- include "windows-docker-dind.labels" . | nindent 4 }}
 data:
-  daemon.json: |
+  daemon.json: |-
     {{- $data := dict "hosts" (list .Values.docker.host) "insecure-registries" .Values.docker.insecureRegistries }}
-    {{- if .Values.docker.builder }}
+    {{- if and .Values.docker.builder .Values.docker.builder.gc }}
     {{- $_ := set $data "builder" (dict "gc" (dict "defaultKeepStorage" .Values.docker.builder.gc.defaultKeepStorage "enabled" .Values.docker.builder.gc.enabled)) }}
     {{- end }}
     {{- if .Values.docker.extraArgs }}
