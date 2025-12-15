@@ -391,6 +391,43 @@ jobs:
             -t "${{ env.DOCKER_REPO }}docker-dind:${{ env.DOCKER_TAG }}" \
             "${{ env.DOCKER_REPO }}docker-dind:${{ env.DOCKER_RELEASE_PREFIX_OPT }}windows"
 
+  test-charts:
+    name: Test Helm Charts
+    runs-on: ubuntu-latest
+    needs: tag
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - chart: docker-dind/chart
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5.0.0
+        with:
+          fetch-depth: 0
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4.3.1
+
+      - uses: actions/setup-python@v6.0.0
+        with:
+          python-version: '3.13'
+          check-latest: true
+
+      - name: Set up chart testing
+        uses: helm/chart-testing-action@v2.8.0
+
+      - name: Run chart testing (lint)
+        run: ct lint --chart-dirs ${{ matrix.chart }}
+
+      - name: Create kind cluster
+        uses: helm/kind-action@v1.12.0
+
+      - name: Run chart testing (install)
+        run: ct install --chart-dirs ${{ matrix.chart }}
+
   merge-status:
     name: Merge Status Check
     needs: [merge]
@@ -416,6 +453,7 @@ jobs:
     needs: 
       - merge-status
       - cleanup-runners
+      - test-charts
       - build
     environment: completion
     runs-on: ubuntu-latest

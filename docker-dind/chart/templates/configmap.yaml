@@ -6,14 +6,14 @@ metadata:
     {{- include "windows-docker-dind.labels" . | nindent 4 }}
 data:
   daemon.json: |
-    {
-      "hosts": [{{ .Values.docker.host | quote }}],
-      "insecure-registries": {{ .Values.docker.insecureRegistries | toJson }}
-      {{- if .Values.docker.extraArgs }}
-      ,
-      {{- range $index, $arg := .Values.docker.extraArgs }}
-      {{- if $index }},{{ end }}
-      {{- $arg | nindent 6 }}
-      {{- end }}
-      {{- end }}
-    }
+    {{- $data := dict "hosts" (list .Values.docker.host) "insecure-registries" .Values.docker.insecureRegistries }}
+    {{- if .Values.docker.builder }}
+    {{- $_ := set $data "builder" (dict "gc" (dict "defaultKeepStorage" .Values.docker.builder.gc.defaultKeepStorage "enabled" .Values.docker.builder.gc.enabled)) }}
+    {{- end }}
+    {{- if .Values.docker.extraArgs }}
+    {{- range .Values.docker.extraArgs }}
+    {{- $parts := splitn ":" 2 . }}
+    {{- $_ := set $data (index $parts 0 | trim) (index $parts 1 | trim) }}
+    {{- end }}
+    {{- end }}
+    {{- mustToJson $data | nindent 4 }}
