@@ -471,6 +471,8 @@ jobs:
         id: load-secrets
         env:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+          CR_KEYFILE: ${{ vars.CR_KEYFILE }}
+          CR_PASSPHRASE: ${{ vars.CR_PASSPHRASE }}
       
       - name: Import GPG Key
         id: import-gpg
