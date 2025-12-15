@@ -1,9 +1,9 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ include "windows-docker-dind.fullname" . }}
+  name: {{ include "docker-dind.fullname" . }}
   labels:
-    {{- include "windows-docker-dind.labels" . | nindent 4 }}
+    {{- include "docker-dind.labels" . | nindent 4 }}
 data:
   daemon.json: |-
     {{- $data := dict "hosts" (list .Values.docker.host) "insecure-registries" .Values.docker.insecureRegistries }}

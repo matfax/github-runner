@@ -2,9 +2,9 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: {{ include "windows-docker-dind.fullname" . }}
+  name: {{ include "docker-dind.fullname" . }}
   labels:
-    {{- include "windows-docker-dind.labels" . | nindent 4 }}
+    {{- include "docker-dind.labels" . | nindent 4 }}
 spec:
   accessModes:
     - {{ .Values.persistence.accessMode }}

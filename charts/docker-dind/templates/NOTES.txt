@@ -1,4 +1,4 @@
-{{- $serviceFullName := include "windows-docker-dind.fullname" . -}}
+{{- $serviceFullName := include "docker-dind.fullname" . -}}
 {{- $servicePort := .Values.service.port -}}
 
 Windows Docker-in-Docker service installed!

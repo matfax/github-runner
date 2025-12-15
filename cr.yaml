@@ -3,3 +3,4 @@ git-repo: github-runner
 generate-notes: true
 sign: true
 key: Matthias Fax
+pages-branch: gh-pages
