@@ -398,24 +398,25 @@ jobs:
             -t "${{ env.DOCKER_REPO }}docker-dind:${{ env.DOCKER_TAG }}" \
             "${{ env.DOCKER_REPO }}docker-dind:${{ env.DOCKER_RELEASE_PREFIX_OPT }}windows"
 
-  merge-status:
-    name: Merge Status Check
-    needs: [merge]
+  review-optional:
+    name: Review Optional Jobs
+    needs: 
+      - merge
+      - tag
     if: always()
     runs-on: ubuntu-latest
     permissions:
       contents: none
-    outputs:
-      merge_result: ${{ steps.check-status.outputs.result }}
     steps:
       - name: Check merge job status
-        id: check-status
         run: |
           if [ "${{ needs.merge.result }}" = "failure" ]; then
-            echo "result=failure" >> "$GITHUB_OUTPUT"
             exit 1
-          else
-            echo "result=${{ needs.merge.result }}" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Check tag job status
+        run: |
+          if [ "${{ needs.tag.result }}" = "failure" ]; then
+            exit 1
           fi
 
   lint-charts:
@@ -495,7 +496,7 @@ jobs:
   complete:
     name: Complete Workflow
     needs: 
-      - merge-status
+      - review-optional
       - cleanup-runners
       - build
       - lint-charts
