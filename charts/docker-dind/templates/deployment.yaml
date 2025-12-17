@@ -29,6 +29,7 @@ spec:
       serviceAccountName: {{ include "docker-dind.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      hostNetwork: {{ .Values.hostNetwork }}
       nodeSelector:
         {{- toYaml .Values.nodeSelector | nindent 8 }}
       tolerations:

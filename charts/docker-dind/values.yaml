@@ -61,6 +61,9 @@ affinity: {}
 # Pod security context - DinD requires privileged
 podSecurityContext: {}
 
+# Host network - Use host network namespace
+hostNetwork: true
+
 # Security context - Windows hostProcess for accessing host containerd
 securityContext:
   windowsOptions:
