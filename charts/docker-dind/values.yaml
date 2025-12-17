@@ -61,7 +61,8 @@ affinity: {}
 # Pod security context - DinD requires privileged
 podSecurityContext: {}
 
-# Host network - Use host network namespace
+# Host network - Use host network namespace for Docker-in-Docker
+# Required for proper network access and Docker daemon functionality
 hostNetwork: true
 
 # Security context - Windows hostProcess for accessing host containerd
