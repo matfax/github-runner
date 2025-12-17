@@ -3,6 +3,7 @@
     "config:best-practices",
     "group:allDigest",
     "mergeConfidence:all-badges",
+    "helpers:pinGitHubActionDigestsToSemver",
     ":automergePr",
     ":approveMajorUpdates",
     ":automergeTesters",
