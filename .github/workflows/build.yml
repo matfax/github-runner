@@ -37,7 +37,7 @@ jobs:
     outputs:
       reg_token: ${{ steps.encoded-reg-token.outputs.out }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4.2.2
       - name: Create registration token
         id: token
         shell: bash
@@ -114,9 +114,9 @@ jobs:
       TEST_PROJECT: test-${{ github.run_id }}-${{ matrix.platform }}
       PLATFORMS: ${{ matrix.platform == 'linux' && 'linux/amd64,linux/arm64' || 'windows/amd64' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4.2.2
       - name: Login to GHCR
-        uses: docker/login-action@v3
+        uses: docker/login-action@v3.6.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -124,20 +124,20 @@ jobs:
 
       - name: Set up QEMU
         if: matrix.platform == 'linux'
-        uses: docker/setup-qemu-action@v2
+        uses: docker/setup-qemu-action@v2.2.0
         with:
           platforms: ${{ env.PLATFORMS }}
       
       - name: Set up Docker Buildx
         if: matrix.buildkit
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v3.11.1
         with:
           platforms: ${{ env.PLATFORMS }}
           driver: ${{ matrix.buildkit && 'docker-container' || 'docker' }}
 
       - name: Build Multi-Arch Docker Image (using Buildx)
         if: matrix.buildkit && matrix.test
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v6.18.0
         with:
           context: ${{ matrix.context }}
           tags: ${{ env.TEST_TAG }}
@@ -147,7 +147,7 @@ jobs:
       
       - name: Load Docker Image (using Buildx)
         if: matrix.buildkit && matrix.test
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v6.18.0
         with:
           load: true
           context: ${{ matrix.context }}
@@ -287,7 +287,7 @@ jobs:
           ttl: '2'
 
       - name: Push Docker Image (with Buildx)
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v6.18.0
         if: matrix.buildkit && (github.event_name == 'release' || github.event_name == 'push' || github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.ref_name == 'main'))
         env:
           REGISTRY_REF: registry,ref=${{ env.DOCKER_REPO }}${{ matrix.registry }}:buildcache-${{ matrix.platform }}
@@ -316,7 +316,7 @@ jobs:
       actions: write
     steps:
       - name: Cancel workflow
-        uses: action-pack/cancel@v1
+        uses: action-pack/cancel@v1.0.0
 
   test:
     name: Integrated Runner Test
@@ -348,17 +348,17 @@ jobs:
     env:
       DOCKER_TAG: ${{ github.event_name == 'release' && github.event.release.tag_name || 'latest' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4.2.2
 
       - name: Login to GHCR
-        uses: docker/login-action@v3
+        uses: docker/login-action@v3.6.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ github.token }}
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v3.11.1
 
       - name: Merge multi-platform images
         run: |
@@ -378,17 +378,17 @@ jobs:
     env:
       DOCKERD_VERSION: 28.3.1
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4.2.2
 
       - name: Login to GHCR
-        uses: docker/login-action@v3
+        uses: docker/login-action@v3.6.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ github.token }}
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v3.11.1
 
       - name: Tag docker-dind image
         env:
@@ -517,7 +517,7 @@ jobs:
       contents: read
     environment: registration
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4.2.2
       - name: Delete self-hosted runners for this run
         shell: pwsh
         env:

@@ -19,7 +19,7 @@ jobs:
     outputs:
       conclusion: ${{ steps.wait-for-job.outputs.conclusion }}
     steps:
-      - uses: beacon-biosignals/wait-for-job@v1
+      - uses: beacon-biosignals/wait-for-job@v1.0.0
         id: wait-for-job
         with:
           run-id: ${{ github.event.workflow_run.id }}
@@ -37,7 +37,7 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4.2.2
       - name: Check for stuck jobs
         id: check
         run: |
