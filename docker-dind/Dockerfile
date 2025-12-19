@@ -1,7 +1,7 @@
 # escape=`
 
 # Use Windows Server Core as base
-FROM mcr.microsoft.com/powershell:lts-windowsservercore-ltsc2022
+FROM mcr.microsoft.com/powershell:lts-windowsservercore-ltsc2022@sha256:4d58db7a0242824875f60449f8ebe482e14c15470b2a9a7ca1bce0172770240c
 
 # Metadata
 LABEL org.opencontainers.image.source="https://github.com/matfax/github-runner"
