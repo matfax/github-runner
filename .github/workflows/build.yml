@@ -398,26 +398,6 @@ jobs:
             -t "${{ env.DOCKER_REPO }}docker-dind:${{ env.DOCKER_TAG }}" \
             "${{ env.DOCKER_REPO }}docker-dind:${{ env.DOCKER_RELEASE_PREFIX_OPT }}windows"
 
-  review-optional:
-    name: Review Optional Jobs
-    needs: 
-      - merge
-      - tag
-    if: always()
-    runs-on: ubuntu-latest
-    permissions:
-      contents: none
-    steps:
-      - name: Check merge job status
-        run: |
-          if [ "${{ needs.merge.result }}" = "failure" ]; then
-            exit 1
-          fi
-      - name: Check tag job status
-        run: |
-          if [ "${{ needs.tag.result }}" = "failure" ]; then
-            exit 1
-          fi
 
   lint-charts:
     name: Test Helm Charts
@@ -495,18 +475,43 @@ jobs:
 
   complete:
     name: Complete Workflow
-    needs: 
-      - review-optional
+    needs:
       - cleanup-runners
       - build
       - lint-charts
+      - merge
+      - tag
+    if: always()
     environment: completion
     runs-on: ubuntu-latest
     permissions:
       contents: none
     steps:
-      - name: Workflow complete
-        run: echo "Workflow has finished all jobs."
+      - name: Check dependent job results
+        shell: bash
+        run: |
+          # Fail only on explicit failures/cancellations, ignore skipped jobs
+          if [ "${{ needs.build.result }}" = "failure" ] || [ "${{ needs.build.result }}" = "cancelled" ]; then
+            echo "build -> ${{ needs.build.result }}"
+            exit 1
+          fi
+          if [ "${{ needs.lint-charts.result }}" = "failure" ] || [ "${{ needs.lint-charts.result }}" = "cancelled" ]; then
+            echo "lint-charts -> ${{ needs.lint-charts.result }}"
+            exit 1
+          fi
+          if [ "${{ needs.merge.result }}" = "failure" ] || [ "${{ needs.merge.result }}" = "cancelled" ]; then
+            echo "merge -> ${{ needs.merge.result }}"
+            exit 1
+          fi
+          if [ "${{ needs.tag.result }}" = "failure" ] || [ "${{ needs.tag.result }}" = "cancelled" ]; then
+            echo "tag -> ${{ needs.tag.result }}"
+            exit 1
+          fi
+          if [ "${{ needs.cleanup-runners.result }}" = "failure" ] || [ "${{ needs.cleanup-runners.result }}" = "cancelled" ]; then
+            echo "cleanup-runners -> ${{ needs.cleanup-runners.result }}"
+            exit 1
+          fi
+          echo "No failed dependents (skipped jobs ignored)."
 
   cleanup-runners:
     name: Cleanup Runners
