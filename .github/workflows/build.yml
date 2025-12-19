@@ -316,7 +316,7 @@ jobs:
       actions: write
     steps:
       - name: Cancel workflow
-        uses: action-pack/cancel@v1.0.0
+        uses: action-pack/cancel@v1
 
   test:
     name: Integrated Runner Test
