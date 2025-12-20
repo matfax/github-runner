@@ -37,7 +37,7 @@ jobs:
     outputs:
       reg_token: ${{ steps.encoded-reg-token.outputs.out }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: Create registration token
         id: token
         shell: bash
@@ -114,9 +114,9 @@ jobs:
       TEST_PROJECT: test-${{ github.run_id }}-${{ matrix.platform }}
       PLATFORMS: ${{ matrix.platform == 'linux' && 'linux/amd64,linux/arm64' || 'windows/amd64' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: Login to GHCR
-        uses: docker/login-action@v3
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -124,20 +124,20 @@ jobs:
 
       - name: Set up QEMU
         if: matrix.platform == 'linux'
-        uses: docker/setup-qemu-action@v2
+        uses: docker/setup-qemu-action@2b82ce82d56a2a04d2637cd93a637ae1b359c0a7 # v2.2.0
         with:
           platforms: ${{ env.PLATFORMS }}
       
       - name: Set up Docker Buildx
         if: matrix.buildkit
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
         with:
           platforms: ${{ env.PLATFORMS }}
           driver: ${{ matrix.buildkit && 'docker-container' || 'docker' }}
 
       - name: Build Multi-Arch Docker Image (using Buildx)
         if: matrix.buildkit && matrix.test
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
         with:
           context: ${{ matrix.context }}
           tags: ${{ env.TEST_TAG }}
@@ -147,7 +147,7 @@ jobs:
       
       - name: Load Docker Image (using Buildx)
         if: matrix.buildkit && matrix.test
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
         with:
           load: true
           context: ${{ matrix.context }}
@@ -280,14 +280,14 @@ jobs:
 
       - name: Wait for self-hosted jobs
         if: matrix.test
-        uses: yogeshlonkar/wait-for-jobs@v0.4.9
+        uses: yogeshlonkar/wait-for-jobs@3244ca00e7afdbaa306c62813ee95f371bdff93e # v0.4.9
         with:
           jobs: "Integrated Runner Test (${{ matrix.context }})"
           ignore-skipped: 'false'
           ttl: '2'
 
       - name: Push Docker Image (with Buildx)
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
         if: matrix.buildkit && (github.event_name == 'release' || github.event_name == 'push' || github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.ref_name == 'main'))
         env:
           REGISTRY_REF: registry,ref=${{ env.DOCKER_REPO }}${{ matrix.registry }}:buildcache-${{ matrix.platform }}
@@ -348,17 +348,17 @@ jobs:
     env:
       DOCKER_TAG: ${{ github.event_name == 'release' && github.event.release.tag_name || 'latest' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Login to GHCR
-        uses: docker/login-action@v3
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ github.token }}
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
 
       - name: Merge multi-platform images
         run: |
@@ -378,17 +378,17 @@ jobs:
     env:
       DOCKERD_VERSION: 28.3.1
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Login to GHCR
-        uses: docker/login-action@v3
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ github.token }}
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
 
       - name: Tag docker-dind image
         env:
@@ -398,26 +398,6 @@ jobs:
             -t "${{ env.DOCKER_REPO }}docker-dind:${{ env.DOCKER_TAG }}" \
             "${{ env.DOCKER_REPO }}docker-dind:${{ env.DOCKER_RELEASE_PREFIX_OPT }}windows"
 
-  review-optional:
-    name: Review Optional Jobs
-    needs: 
-      - merge
-      - tag
-    if: always()
-    runs-on: ubuntu-latest
-    permissions:
-      contents: none
-    steps:
-      - name: Check merge job status
-        run: |
-          if [ "${{ needs.merge.result }}" = "failure" ]; then
-            exit 1
-          fi
-      - name: Check tag job status
-        run: |
-          if [ "${{ needs.tag.result }}" = "failure" ]; then
-            exit 1
-          fi
 
   lint-charts:
     name: Test Helm Charts
@@ -427,20 +407,20 @@ jobs:
       contents: read
     steps:
       - name: Checkout
-        uses: actions/checkout@v5.0.0
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           fetch-depth: 0
 
       - name: Set up Helm
-        uses: azure/setup-helm@v4.3.1
+        uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # v4.3.1
 
-      - uses: actions/setup-python@v6.0.0
+      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
         with:
           python-version: '3.13'
           check-latest: true
 
       - name: Set up chart testing
-        uses: helm/chart-testing-action@v2.8.0
+        uses: helm/chart-testing-action@6ec842c01de15ebb84c8627d2744a0c2f2755c9f # v2.8.0
 
       - name: Run chart linting
         run: ct lint ${{ github.event != 'pull_request' && '--all' }}
@@ -458,7 +438,7 @@ jobs:
       CR_KEYRING: ${{ vars.CR_KEYDIR }}/secring.gpg
     steps:
       - name: Checkout
-        uses: actions/checkout@v5.0.0
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           fetch-depth: 0
 
@@ -468,10 +448,10 @@ jobs:
           git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
 
       - name: Set up Helm
-        uses: azure/setup-helm@v4.3.1
+        uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # v4.3.1
 
       - name: Load Secrets
-        uses: 1password/load-secrets-action@v3.0.0
+        uses: 1password/load-secrets-action@13f58eec611f8e5db52ec16247f58c508398f3e6 # v3.0.0
         id: load-secrets
         env:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
@@ -485,7 +465,7 @@ jobs:
           echo "${{ steps.load-secrets.outputs.CR_PASSPHRASE }}" > "${{ env.CR_PASSPHRASE_FILE }}"
 
       - name: Run chart-releaser
-        uses: helm/chart-releaser-action@v1.6.0
+        uses: helm/chart-releaser-action@a917fd15b20e8b64b94d9158ad54cd6345335584 # v1.6.0
         with:
           charts_dir: charts
           config: cr.yaml
@@ -495,18 +475,43 @@ jobs:
 
   complete:
     name: Complete Workflow
-    needs: 
-      - review-optional
+    needs:
       - cleanup-runners
       - build
       - lint-charts
+      - merge
+      - tag
+    if: always()
     environment: completion
     runs-on: ubuntu-latest
     permissions:
       contents: none
     steps:
-      - name: Workflow complete
-        run: echo "Workflow has finished all jobs."
+      - name: Check dependent job results
+        shell: bash
+        run: |
+          # Fail only on explicit failures/cancellations, ignore skipped jobs
+          if [ "${{ needs.build.result }}" = "failure" ] || [ "${{ needs.build.result }}" = "cancelled" ]; then
+            echo "build -> ${{ needs.build.result }}"
+            exit 1
+          fi
+          if [ "${{ needs.lint-charts.result }}" = "failure" ] || [ "${{ needs.lint-charts.result }}" = "cancelled" ]; then
+            echo "lint-charts -> ${{ needs.lint-charts.result }}"
+            exit 1
+          fi
+          if [ "${{ needs.merge.result }}" = "failure" ] || [ "${{ needs.merge.result }}" = "cancelled" ]; then
+            echo "merge -> ${{ needs.merge.result }}"
+            exit 1
+          fi
+          if [ "${{ needs.tag.result }}" = "failure" ] || [ "${{ needs.tag.result }}" = "cancelled" ]; then
+            echo "tag -> ${{ needs.tag.result }}"
+            exit 1
+          fi
+          if [ "${{ needs.cleanup-runners.result }}" = "failure" ] || [ "${{ needs.cleanup-runners.result }}" = "cancelled" ]; then
+            echo "cleanup-runners -> ${{ needs.cleanup-runners.result }}"
+            exit 1
+          fi
+          echo "No failed dependents (skipped jobs ignored)."
 
   cleanup-runners:
     name: Cleanup Runners
@@ -517,7 +522,7 @@ jobs:
       contents: read
     environment: registration
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: Delete self-hosted runners for this run
         shell: pwsh
         env:
