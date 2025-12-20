@@ -3,7 +3,7 @@ replicaCount: 1
 image:
   repository: ghcr.io/matfax/github-runner/docker-dind
   pullPolicy: IfNotPresent
-  tag: ""
+  tag: "@sha256:ca4da77f475182ce6411ac001bfadb59c3f1353f28b3bd4a26d35ac06bc605e7"
 
 imagePullSecrets: []
 nameOverride: ""

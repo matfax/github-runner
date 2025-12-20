@@ -1,6 +1,6 @@
 services:
   cache-server:
-    image: ghcr.io/falcondev-oss/github-actions-cache-server:latest
+    image: ghcr.io/falcondev-oss/github-actions-cache-server:latest@sha256:41530ac4215fddcc0bdfd87b5069f40a226572b1325885f02e9173068cdc1872
     ports:
       - '3000:3000'
     environment:
