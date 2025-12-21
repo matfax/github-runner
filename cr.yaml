@@ -4,3 +4,4 @@ generate-notes: true
 sign: true
 key: Matthias Fax
 pages-branch: gh-pages
+check-version-increment: false

@@ -14,8 +14,13 @@ on:
   release:
     types: [ published ]
   schedule:
-    - cron: "0 0 * * *"
+    - cron: '42 4 * * *'
   workflow_dispatch:
+    inputs:
+      bump-docker-dind:
+        description: 'Bump and release docker-dind chart'
+        type: boolean
+        required: false
 
 concurrency: 
   cancel-in-progress: true
@@ -288,7 +293,7 @@ jobs:
 
       - name: Push Docker Image (with Buildx)
         uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
-        if: matrix.buildkit && (github.event_name == 'release' || github.event_name == 'push' || github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.ref_name == 'main'))
+        if: matrix.buildkit && (github.event_name == 'release' || github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
         env:
           REGISTRY_REF: registry,ref=${{ env.DOCKER_REPO }}${{ matrix.registry }}:buildcache-${{ matrix.platform }}
         with:
@@ -300,7 +305,7 @@ jobs:
           cache-to: type=${{ env.REGISTRY_REF }},mode=max
           
       - name: Push Docker Image (without Buildx)
-        if: matrix.buildkit == false && (github.event_name == 'release' || github.event_name == 'push' || github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.ref_name == 'main'))
+        if: matrix.buildkit == false && (github.event_name == 'release' || github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
         env:
           RELEASE_TAG: "${{ env.DOCKER_REPO }}${{ matrix.registry }}:${{ env.DOCKER_RELEASE_PREFIX_OPT }}${{ matrix.tag }}"
         run: |
@@ -342,7 +347,7 @@ jobs:
   merge:
     name: Merge Manifest
     needs: [build, test]
-    if: github.event_name == 'release' || github.event_name == 'push' || github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.ref_name == 'main')
+    if: github.event_name == 'release' || github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -372,13 +377,16 @@ jobs:
   tag:
     name: Additional Tagging
     needs: build
-    if: github.event_name == 'release' || github.event_name == 'push' || github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.ref_name == 'main')
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
     env:
       DOCKERD_VERSION: 28.3.1
+    outputs:
+      docker_dind_digest: ${{ steps.get-digest.outputs.digest }}
+      docker_dind_digest_changed: ${{ steps.get-digest.outputs.changed }}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
@@ -392,6 +400,20 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
 
+      - name: Check existing digest
+        id: existing-digest
+        env:
+          DOCKER_TAG: ${{ github.event_name == 'release' && env.DOCKERD_VERSION || 'latest' }}
+        run: |
+          EXISTING_DIGEST=$(docker buildx imagetools inspect "${{ env.DOCKER_REPO }}docker-dind:${{ env.DOCKER_TAG }}" --format '{{json .Manifest.Digest}}' 2>/dev/null | tr -d '"' || true)
+          if [ -n "$EXISTING_DIGEST" ]; then
+            echo "Existing digest: $EXISTING_DIGEST"
+            echo "digest=$EXISTING_DIGEST" >> $GITHUB_OUTPUT
+          else
+            echo "No existing image found"
+            echo "digest=" >> $GITHUB_OUTPUT
+          fi
+
       - name: Tag docker-dind image
         env:
           DOCKER_TAG: ${{ github.event_name == 'release' && env.DOCKERD_VERSION || 'latest' }}
@@ -400,6 +422,26 @@ jobs:
             -t "${{ env.DOCKER_REPO }}docker-dind:${{ env.DOCKER_TAG }}" \
             "${{ env.DOCKER_REPO }}docker-dind:${{ env.DOCKER_RELEASE_PREFIX_OPT }}windows"
 
+      - name: Get docker-dind image digest
+        id: get-digest
+        env:
+          DOCKER_TAG: ${{ github.event_name == 'release' && env.DOCKERD_VERSION || 'latest' }}
+        run: |
+          NEW_DIGEST=$(docker buildx imagetools inspect "${{ env.DOCKER_REPO }}docker-dind:${{ env.DOCKER_TAG }}" --format '{{json .Manifest.Digest}}' | tr -d '"')
+          echo "New digest: $NEW_DIGEST"
+          echo "digest=$NEW_DIGEST" >> $GITHUB_OUTPUT
+          
+          if [ "${{ steps.existing-digest.outputs.digest }}" != "$NEW_DIGEST" ]; then
+            if [ -n "${{ steps.existing-digest.outputs.digest }}" ]; then
+              echo "Digest changed from ${{ steps.existing-digest.outputs.digest }}"
+            else
+              echo "New image created"
+            fi
+            echo "changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "Digest unchanged"
+            echo "changed=false" >> $GITHUB_OUTPUT
+          fi
 
   lint-charts:
     name: Test Helm Charts
@@ -429,8 +471,10 @@ jobs:
 
   release-charts:
     name: Release Helm Charts
-    needs: lint-charts
-    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.ref_name == 'main')
+    needs: 
+      - lint-charts
+      - tag
+    if: ((github.event_name == 'push' || github.event_name == 'schedule') && needs.tag.outputs.docker_dind_digest_changed == 'true') || (github.event_name == 'workflow_dispatch' && github.event.inputs['bump-docker-dind'] == 'true')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -466,11 +510,68 @@ jobs:
           base64 -d <<< "${{ steps.load-secrets.outputs.CR_KEYFILE }}" > "${{ env.CR_KEYRING }}"
           echo "${{ steps.load-secrets.outputs.CR_PASSPHRASE }}" > "${{ env.CR_PASSPHRASE_FILE }}"
 
+      - name: Install yq
+        run: |
+          if ! command -v yq &> /dev/null; then
+            pip install yq
+          fi
+
+      - name: Extract Git Version
+        uses: codacy/git-version@2.8.6
+        id: git-version
+        with:
+          prefix: docker-dind-
+          log-paths: charts/docker-dind/
+
+      - name: Determine Prerelease Version
+        id: prerelease-version
+        uses: boromir674/action-semver-bumper@v1.1.1
+        with:
+          sem_ver: ${{ steps.git-version.outputs.non-prefixed-version }}
+          bump_operator: 'dev_prerelease'
+
+      - name: Determine Release Version
+        id: release-version
+        if: github.event.inputs['bump-docker-dind'] == 'true'
+        uses: ietf-tools/semver-action@v1.11.0
+        with:
+          token: ${{ github.token }}
+          prefix: docker-dind-
+          noNewCommitBehavior: warn
+          scopeList: docker-dind,docker,dind
+          skipInvalidTags: true
+
+      - name: Patch values.yaml
+        shell: bash
+        run: |
+          yq eval -i ".image.tag = \"@${{ needs.tag.outputs.docker_dind_digest }}\"" charts/docker-dind/values.yaml
+          echo "Patched values.yaml with digest: ${{ needs.tag.outputs.docker_dind_digest }}"
+
+      - name: Patch Chart.yaml
+        shell: bash
+        id: patch-chart
+        env:
+          TARGET_VERSION: ${{ github.event.inputs['bump-docker-dind'] == 'true' && steps.release-version.outputs.nextStrict || steps.prerelease-version.outputs.new_version }}
+        run: |
+          yq eval -i ".version = \"${{ env.TARGET_VERSION }}\"" charts/docker-dind/Chart.yaml
+          echo "version=${{ env.TARGET_VERSION }}" >> $GITHUB_OUTPUT
+          echo "Patched Chart.yaml to version ${{ env.TARGET_VERSION }}"
+
+      - name: Tag and Push Git Tag
+        shell: bash
+        run: |
+          git add charts/docker-dind/Chart.yaml charts/docker-dind/values.yaml
+          git commit -m "chore(chart): bump docker-dind chart to ${{ steps.patch-chart.outputs.version }}" || echo "No changes to commit"
+          git tag "docker-dind-${{ steps.patch-chart.outputs.version }}"
+          git push origin HEAD --tags
+
       - name: Run chart-releaser
         uses: helm/chart-releaser-action@a917fd15b20e8b64b94d9158ad54cd6345335584 # v1.6.0
         with:
           charts_dir: charts
           config: cr.yaml
+          mark_as_latest: false
+          skip_existing: false
         env:
           CR_TOKEN: ${{ github.token }}
           CR_SIGN: true
@@ -483,6 +584,7 @@ jobs:
       - lint-charts
       - merge
       - tag
+      - release-charts
     if: always()
     environment: completion
     runs-on: ubuntu-latest
@@ -507,6 +609,10 @@ jobs:
           fi
           if [ "${{ needs.tag.result }}" = "failure" ] || [ "${{ needs.tag.result }}" = "cancelled" ]; then
             echo "tag -> ${{ needs.tag.result }}"
+            exit 1
+          fi
+          if [ "${{ needs.release-charts.result }}" = "failure" ] || [ "${{ needs.release-charts.result }}" = "cancelled" ]; then
+            echo "release-charts -> ${{ needs.release-charts.result }}"
             exit 1
           fi
           if [ "${{ needs.cleanup-runners.result }}" = "failure" ] || [ "${{ needs.cleanup-runners.result }}" = "cancelled" ]; then
