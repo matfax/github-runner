@@ -519,18 +519,26 @@ jobs:
             pip install yq
           fi
 
-      - name: Extract Git Version
+      - name: Extract Latest Git Tag
         uses: oprypin/find-latest-tag@dd2729fe78b0bb55523ae2b2a310c6773a652bd1 # v1.1.2
         id: git-version
         with:
           repository: ${{ github.repository }}
           prefix: docker-dind-
 
+      - name: Match Previous Version
+        id: previous-version
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
+        with:
+          script: |
+            const strippedVersion = '${{ steps.git-version.outputs.tag }}'.replace('docker-dind-', '');
+            core.setOutput('version', strippedVersion);
+
       - name: Determine Prerelease Version
         id: prerelease-version
         uses: boromir674/action-semver-bumper@90e0ae6a1b02192a1751fa155a911ecb59d6c2a4 # v1.1.1
         with:
-          sem_ver: ${{ steps.git-version.outputs.tag }}
+          sem_ver: ${{ steps.previous-version.outputs.version }}
           bump_operator: 'dev_prerelease'
 
       - name: Determine Release Version
