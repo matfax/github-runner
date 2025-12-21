@@ -322,7 +322,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-        
+
       - name: Cancel workflow
         env:
           GH_TOKEN: ${{ github.token }}
@@ -520,17 +520,17 @@ jobs:
           fi
 
       - name: Extract Git Version
-        uses: codacy/git-version@877bb11b7a2ee44dcd7c0a03882c7037356e64e9 # 2.8.6
+        uses: oprypin/find-latest-tag@dd2729fe78b0bb55523ae2b2a310c6773a652bd1 # v1.1.2
         id: git-version
         with:
+          repository: ${{ github.repository }}
           prefix: docker-dind-
-          log-paths: charts/docker-dind/
 
       - name: Determine Prerelease Version
         id: prerelease-version
         uses: boromir674/action-semver-bumper@90e0ae6a1b02192a1751fa155a911ecb59d6c2a4 # v1.1.1
         with:
-          sem_ver: ${{ steps.git-version.outputs.non-prefixed-version }}
+          sem_ver: ${{ steps.git-version.outputs.tag }}
           bump_operator: 'dev_prerelease'
 
       - name: Determine Release Version
@@ -542,6 +542,8 @@ jobs:
           prefix: docker-dind-
           noNewCommitBehavior: warn
           scopeList: docker-dind,docker,dind
+          minorList: feat, feature, refactor
+          patchList: fix, perf, build, test, tests
           skipInvalidTags: true
 
       - name: Patch values.yaml
