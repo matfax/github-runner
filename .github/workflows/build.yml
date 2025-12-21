@@ -485,6 +485,7 @@ jobs:
     env:
       CR_PASSPHRASE_FILE: ${{ vars.CR_KEYDIR }}/passphrase
       CR_KEYRING: ${{ vars.CR_KEYDIR }}/secring.gpg
+      TEMP_BRANCH_REF: refs/heads/tmp/docker-dind-${{ github.run_id }}
     steps:
       - name: Checkout
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
@@ -570,15 +571,15 @@ jobs:
           echo "version=${{ env.TARGET_VERSION }}" >> $GITHUB_OUTPUT
           echo "Patched Chart.yaml to version ${{ env.TARGET_VERSION }}"
 
-      - name: Tag and Push Git Tag
-        shell: bash
-        run: |
-          git add charts/docker-dind/Chart.yaml charts/docker-dind/values.yaml
-          git commit -m "chore(chart): bump docker-dind chart to ${{ steps.patch-chart.outputs.version }}" || echo "No changes to commit"
-          git tag "docker-dind-${{ steps.patch-chart.outputs.version }}"
-          git push origin HEAD --tags
+      - name: Commit and Push Changes
+        uses: iarekylew00t/verified-bot-commit@d7e8eea1f154881e1f9d70a3fd933e740148b7f4 # v2.1.1
+        with:
+          message: 'chore(chart): bump docker-dind chart to ${{ steps.patch-chart.outputs.version }}'
+          ref: ${{ env.TEMP_BRANCH_REF }}
+          files: |
+            charts/docker-dind/*.yaml
 
-      - name: Run chart-releaser
+      - name: Tag and Release Charts
         uses: helm/chart-releaser-action@a917fd15b20e8b64b94d9158ad54cd6345335584 # v1.6.0
         with:
           charts_dir: charts
@@ -588,6 +589,14 @@ jobs:
         env:
           CR_TOKEN: ${{ github.token }}
           CR_SIGN: true
+
+      - name: Delete temp branch
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TMP_BRANCH: tmp/chart-bump-${{ github.run_id }}
+        run: |
+          gh api -X DELETE repos/${{ github.repository }}/git/${{ env.TEMP_BRANCH_REF }}
 
   complete:
     name: Complete Workflow
