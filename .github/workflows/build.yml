@@ -517,7 +517,7 @@ jobs:
           fi
 
       - name: Extract Git Version
-        uses: codacy/git-version@2.8.6
+        uses: codacy/git-version@877bb11b7a2ee44dcd7c0a03882c7037356e64e9 # 2.8.6
         id: git-version
         with:
           prefix: docker-dind-
@@ -525,7 +525,7 @@ jobs:
 
       - name: Determine Prerelease Version
         id: prerelease-version
-        uses: boromir674/action-semver-bumper@v1.1.1
+        uses: boromir674/action-semver-bumper@90e0ae6a1b02192a1751fa155a911ecb59d6c2a4 # v1.1.1
         with:
           sem_ver: ${{ steps.git-version.outputs.non-prefixed-version }}
           bump_operator: 'dev_prerelease'
@@ -533,7 +533,7 @@ jobs:
       - name: Determine Release Version
         id: release-version
         if: github.event.inputs['bump-docker-dind'] == 'true'
-        uses: ietf-tools/semver-action@v1.11.0
+        uses: ietf-tools/semver-action@c90370b2958652d71c06a3484129a4d423a6d8a8 # v1.11.0
         with:
           token: ${{ github.token }}
           prefix: docker-dind-
