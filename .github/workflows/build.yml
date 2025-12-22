@@ -540,7 +540,7 @@ jobs:
         uses: boromir674/action-semver-bumper@90e0ae6a1b02192a1751fa155a911ecb59d6c2a4 # v1.1.1
         with:
           sem_ver: ${{ steps.previous-version.outputs.version }}
-          bump_operator: DEV_PRERELEASE
+          bump_operator: 'DEV_PRERELEASE'
 
       - name: Determine Release Version
         id: release-version
