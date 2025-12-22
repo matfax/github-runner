@@ -1,20 +1,16 @@
 replicaCount: 1
-
 image:
   repository: ghcr.io/matfax/github-runner/docker-dind
   pullPolicy: IfNotPresent
-  tag: ""
-
+  tag: "@sha256:6417c9862357a306d8469676c69ed942dc5bb62143183ec892d106659548fd84"
 imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
-
 service:
   type: ClusterIP
   port: 2375
   targetPort: 2375
   annotations: {}
-
 # Docker daemon configuration
 docker:
   # TCP host binding
@@ -33,7 +29,6 @@ docker:
       enabled: true
   # Additional daemon options
   extraArgs: []
-
 # Resource requests and limits
 resources:
   limits:
@@ -42,31 +37,25 @@ resources:
   requests:
     cpu: 500m
     memory: 1Gi
-
 # Node selector for Windows nodes
 nodeSelector:
   kubernetes.io/os: windows
   kubernetes.io/arch: amd64
-
 # Tolerations for Windows nodes
 tolerations:
   - key: "os"
     operator: "Equal"
     value: "windows"
     effect: "NoSchedule"
-
 # Affinity for scheduling
 affinity: {}
-
 # Pod security context - DinD requires privileged
 podSecurityContext: {}
-
 # Security context - Windows hostProcess for accessing host containerd
 securityContext:
   windowsOptions:
     hostProcess: true
     runAsUserName: "NT AUTHORITY\\SYSTEM"
-
 # Liveness probe - using Docker API health check
 livenessProbe:
   tcpSocket:
@@ -76,7 +65,6 @@ livenessProbe:
   timeoutSeconds: 10
   successThreshold: 1
   failureThreshold: 3
-
 # Readiness probe
 readinessProbe:
   tcpSocket:
@@ -86,19 +74,15 @@ readinessProbe:
   timeoutSeconds: 5
   successThreshold: 1
   failureThreshold: 3
-
 # Service account configuration
 serviceAccount:
   create: true
   annotations: {}
   name: ""
-
 # Pod annotations
 podAnnotations: {}
-
 # Pod labels
 podLabels: {}
-
 # Persistence for Docker data (optional)
 persistence:
   enabled: false
@@ -107,7 +91,6 @@ persistence:
   accessMode: ReadWriteOnce
   size: 50Gi
   mountPath: C:/var/lib/docker
-
 # Network policy
 networkPolicy:
   enabled: false
