@@ -79,6 +79,10 @@
     {
       "matchDepNames": ["moby/moby"],
       "groupName": "docker-engine version"
+    },
+    {
+      "matchPackageNames": ["ghcr.io/matfax/github-runner/docker-dind"],
+      "enabled": false
     }
   ]
 }
