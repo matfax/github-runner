@@ -571,6 +571,14 @@ jobs:
           echo "version=${{ env.TARGET_VERSION }}" >> $GITHUB_OUTPUT
           echo "Patched Chart.yaml to version ${{ env.TARGET_VERSION }}"
 
+      - name: Create Temporary Branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api repos/${{ github.repository }}/git/refs \
+            -f ref="${{ env.TEMP_BRANCH_REF }}" \
+            -f sha="$(git rev-parse HEAD)"
+
       - name: Commit and Push Changes
         uses: iarekylew00t/verified-bot-commit@d7e8eea1f154881e1f9d70a3fd933e740148b7f4 # v2.1.1
         with:
