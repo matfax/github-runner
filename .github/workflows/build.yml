@@ -527,20 +527,29 @@ jobs:
           repository: ${{ github.repository }}
           prefix: docker-dind-
 
-      - name: Match Previous Version
-        id: previous-version
+      - name: Determine Prerelease Version
+        id: prerelease-version
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
         with:
           script: |
-            const strippedVersion = '${{ steps.git-version.outputs.tag }}'.replace('docker-dind-', '');
-            core.setOutput('version', strippedVersion);
-
-      - name: Determine Prerelease Version
-        id: prerelease-version
-        uses: boromir674/action-semver-bumper@90e0ae6a1b02192a1751fa155a911ecb59d6c2a4 # v1.1.1
-        with:
-          sem_ver: ${{ steps.previous-version.outputs.version }}
-          bump_operator: 'DEV_PRERELEASE'
+            const tag = '${{ steps.git-version.outputs.tag }}'.replace('docker-dind-', '');
+            const semverRegex = /^(\d+)\.(\d+)\.(\d+)(?:-([a-zA-Z]+)\.(\d+))?$/;
+            const match = tag.match(semverRegex);
+            if (!match) {
+              core.setFailed(`Invalid semver: ${tag}`);
+              return;
+            }
+            const [, major, minor, patch, preLabel, preNum] = match;
+            let newVersion;
+            if (preLabel === 'dev') {
+              newVersion = `${major}.${minor}.${patch}-dev.${parseInt(preNum, 10) + 1}`;
+            } else if (preLabel) {
+              newVersion = `${major}.${minor}.${parseInt(patch, 10) + 1}-dev.0`;
+            } else {
+              newVersion = `${major}.${minor}.${parseInt(patch, 10) + 1}-dev.0`;
+            }
+            core.info(`Bumped ${tag} -> ${newVersion}`);
+            core.setOutput('new_version', newVersion);
 
       - name: Determine Release Version
         id: release-version
