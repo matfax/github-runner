@@ -576,7 +576,7 @@ jobs:
         env:
           TARGET_VERSION: ${{ github.event.inputs['bump-docker-dind'] == 'true' && steps.release-version.outputs.nextStrict || steps.prerelease-version.outputs.new_version }}
         run: |
-          yq eval -i ".version = '${{ env.TARGET_VERSION }}'" charts/docker-dind/Chart.yaml
+          yq eval -i ".version = \"${{ env.TARGET_VERSION }}\"" charts/docker-dind/Chart.yaml
           echo "version=${{ env.TARGET_VERSION }}" >> $GITHUB_OUTPUT
           echo "Patched Chart.yaml to version ${{ env.TARGET_VERSION }}"
 
