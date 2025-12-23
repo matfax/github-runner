@@ -7,7 +7,13 @@ To use this Docker daemon from your applications:
 
 1. Set the DOCKER_HOST environment variable:
 
-   export DOCKER_HOST=tcp://{{ $serviceFullName }}:{{ $servicePort }}
+   PowerShell:
+   $env:DOCKER_HOST = "tcp://{{ $serviceFullName }}:{{ $servicePort }}"
+
+   Or in a Kubernetes pod spec:
+   env:
+     - name: DOCKER_HOST
+       value: "tcp://{{ $serviceFullName }}.{{ .Release.Namespace }}.svc.cluster.local:{{ $servicePort }}"
 
 2. Test the connection:
 
@@ -23,6 +29,7 @@ Service Details:
 - Namespace: {{ .Release.Namespace }}
 - Type: {{ .Values.service.type }}
 - Port: {{ $servicePort }}
+- FQDN: {{ $serviceFullName }}.{{ .Release.Namespace }}.svc.cluster.local
 
 {{- if eq .Values.service.type "ClusterIP" }}
 Note: Service is ClusterIP. Ensure your Docker client is running within the cluster or has network access.

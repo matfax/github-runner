@@ -38,9 +38,8 @@ RUN Expand-Archive -Path C:/docker-binaries.zip -DestinationPath C:\docker-extra
 
 RUN "[Environment]::SetEnvironmentVariable('PATH', (Join-Path $env:ProgramFiles 'docker') + [IO.Path]::PathSeparator + $env:PATH, [EnvironmentVariableTarget]::Machine)"
 
-# Configure Docker daemon for TCP
+# Create docker-config directory (daemon.json is mounted via Helm ConfigMap)
 RUN mkdir C:\docker-config
-COPY daemon.json C:/docker-config/daemon.json
 
 # Expose Docker TCP port
 EXPOSE 2375

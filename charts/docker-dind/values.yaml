@@ -24,6 +24,9 @@ docker:
     - "10.0.0.0/8"
     - "172.16.0.0/12"
     - "192.168.0.0/16"
+  # Explicit data directory for Docker (images, layers, containers)
+  # Must match persistence.mountPath for cache to persist
+  dataRoot: "C:/docker-data"
   # Builder configuration
   builder:
     gc:
@@ -103,14 +106,15 @@ podAnnotations: {}
 # Pod labels
 podLabels: {}
 
-# Persistence for Docker data (optional)
+# Persistence for Docker data (images, containers, volumes, build cache)
 persistence:
   enabled: false
   existingClaim: ""
   storageClass: ""
   accessMode: ReadWriteOnce
   size: 50Gi
-  mountPath: C:/var/lib/docker
+  # Must match docker.dataRoot below
+  mountPath: C:/docker-data
 
 # Network policy
 networkPolicy:
