@@ -117,16 +117,6 @@ persistence:
   # Must match docker.dataRoot below
   mountPath: C:/docker-data
 
-# Network policy
-# Note: NetworkPolicy may not work effectively with hostNetwork pods
-# Use firewall.podCIDR for access control instead
-networkPolicy:
-  enabled: false
-  # List of namespace names that are allowed to access the docker-dind service
-  # If empty, only pods in the same namespace can access (default behavior)
-  # Example: ["github-actions", "ci-cd"]
-  allowedNamespaces: []
-
 # Windows firewall configuration
 firewall:
   enabled: true

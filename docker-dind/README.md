@@ -145,8 +145,6 @@ firewall:
   podCIDR: ""  # Empty string allows access from any address
 ```
 
-- **NetworkPolicy**: Note that NetworkPolicy may not work effectively with hostNetwork pods. Use the firewall configuration for access control instead.
-
 ## Troubleshooting
 
 ### Check Docker daemon logs
