@@ -124,30 +124,21 @@ docker context use remote-windows
 - **Windows hostProcess**: The service runs as `NT AUTHORITY\\SYSTEM` with `hostProcess: true` to access the host's containerd named pipe.
 - **Network Access**: The TCP endpoint should be restricted to trusted applications within the cluster.
 - **No TLS**: By default, TLS is disabled. For production, consider adding TLS certificates.
-- **Use NetworkPolicies**: Restrict which pods can access the Docker daemon:
+- **NetworkPolicy**: A NetworkPolicy is enabled by default to restrict access to pods in the same namespace only. To allow access from specific namespaces:
 
 ```yaml
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: docker-dind-access
-spec:
-  podSelector:
-    matchLabels:
-      app: docker-dind
-  policyTypes:
-    - Ingress
-  ingress:
-    - from:
-        - namespaceSelector:
-            matchLabels:
-              name: github-actions
-        - podSelector:
-            matchLabels:
-              app: github-runner
-      ports:
-        - protocol: TCP
-          port: 2375
+networkPolicy:
+  enabled: true
+  allowedNamespaces:
+    - github-actions
+    - ci-cd
+```
+
+To disable the NetworkPolicy (not recommended for production):
+
+```yaml
+networkPolicy:
+  enabled: false
 ```
 
 ## Troubleshooting

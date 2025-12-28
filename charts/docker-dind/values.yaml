@@ -119,6 +119,8 @@ persistence:
 
 # Network policy
 networkPolicy:
-  enabled: false
-  ingress: []
-  egress: []
+  enabled: true
+  # List of namespace names that are allowed to access the docker-dind service
+  # If empty, only pods in the same namespace can access (default behavior)
+  # Example: ["github-actions", "ci-cd"]
+  allowedNamespaces: []
