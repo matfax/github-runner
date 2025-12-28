@@ -14,7 +14,7 @@ $rule = Get-NetFirewallRule -DisplayName 'Allow Docker from Pods' -ErrorAction S
 
 if (-not $rule) {
     $remoteAddress = 'Any'
-    if ($env:FIREWALL_POD_CIDR) {
+    if (-not [string]::IsNullOrEmpty($env:FIREWALL_POD_CIDR)) {
         $remoteAddress = $env:FIREWALL_POD_CIDR
         Write-Host "Creating firewall rule to allow traffic from pod network ($remoteAddress) to port 2375..."
     } else {
