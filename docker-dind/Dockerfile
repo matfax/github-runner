@@ -44,4 +44,4 @@ EXPOSE 2375
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 CMD docker version
 
-CMD ["powershell", "-Command", "$root = $env:CONTAINER_SANDBOX_MOUNT_POINT; $dockerd = Join-Path $root 'Program Files\\docker\\dockerd.exe'; $config = Join-Path $root 'docker-config\\daemon.json'; & $dockerd --config-file=$config"]
+CMD ["powershell", "-Command", "$root = \"$env:CONTAINER_SANDBOX_MOUNT_POINT\"; $dockerd = Join-Path $root 'Program Files\\docker\\dockerd.exe'; $config = Join-Path $root 'docker-config\\daemon.json'; & $dockerd --config-file=$config"]
