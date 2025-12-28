@@ -47,6 +47,7 @@ spec:
           ports:
             - name: docker
               containerPort: {{ .Values.service.targetPort }}
+              hostPort: {{ .Values.service.targetPort }}
               protocol: TCP
           env:
             - name: DOCKER_HOST
