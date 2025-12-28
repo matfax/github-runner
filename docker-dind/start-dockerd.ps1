@@ -13,13 +13,13 @@ Write-Host "Checking firewall rule for pod network access..."
 $rule = Get-NetFirewallRule -DisplayName 'Allow Docker from Pods' -ErrorAction SilentlyContinue
 
 if (-not $rule) {
-    Write-Host "Creating firewall rule to allow traffic from Calico pod network (10.244.0.0/16) to port 2375..."
+    Write-Host "Creating firewall rule to allow traffic from pod network to port 2375..."
     New-NetFirewallRule `
         -DisplayName 'Allow Docker from Pods' `
         -Direction Inbound `
         -Protocol TCP `
         -LocalPort 2375 `
-        -RemoteAddress 10.244.0.0/16 `
+        -RemoteAddress Any `
         -Action Allow | Out-Null
     Write-Host "Firewall rule created successfully."
 } else {
