@@ -52,7 +52,7 @@ Key configuration options:
 # Service configuration
 service:
   type: ClusterIP  # or LoadBalancer for external access
-  clusterIP: "None"  # Headless service - bypasses kube-proxy issues on Windows
+  clusterIP: "None"  # Headless service to work around Windows + Calico kube-proxy not routing ClusterIP traffic to hostNetwork pod endpoints
   port: 2375
 
 # Resource allocation
