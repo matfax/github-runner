@@ -20,7 +20,7 @@ spec:
               kubernetes.io/metadata.name: {{ . }}
         {{- end }}
         {{- else }}
-        - namespaceSelector: {}  # Same namespace only by default
+        - podSelector: {}  # All pods in the same namespace
         {{- end }}
       ports:
         - protocol: TCP
