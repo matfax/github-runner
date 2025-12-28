@@ -20,6 +20,14 @@ This service provides Docker API access via TCP port 2375 by running a Docker da
 - Windows hostProcess container support (Kubernetes 1.23+)
 - Helm 3.x
 
+### Windows Calico CNI Configuration
+
+When running on Windows nodes with Calico CNI, the service defaults to a headless configuration (`clusterIP: None`). This is necessary because:
+1. kube-proxy on Windows doesn't properly route ClusterIP traffic to hostNetwork pod endpoints
+2. DNS resolution with a headless service resolves directly to the node IP, bypassing kube-proxy
+
+The Docker daemon container includes a Windows firewall rule that allows inbound traffic from the Calico pod network (10.244.0.0/16) to port 2375.
+
 ### Option 1: Install from Helm Repository
 
 ```bash
@@ -44,6 +52,7 @@ Key configuration options:
 # Service configuration
 service:
   type: ClusterIP  # or LoadBalancer for external access
+  clusterIP: "None"  # Headless service - bypasses kube-proxy issues on Windows
   port: 2375
 
 # Resource allocation

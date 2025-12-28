@@ -44,4 +44,4 @@ EXPOSE 2375
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 CMD docker version
 
-CMD ["powershell", "-Command", "$root = \"$env:CONTAINER_SANDBOX_MOUNT_POINT\"; $dockerd = Join-Path $root 'Program Files\\docker\\dockerd.exe'; $config = Join-Path $root 'docker-config\\daemon.json'; & $dockerd --config-file=$config"]
+CMD ["powershell", "-Command", "$root = \"$env:CONTAINER_SANDBOX_MOUNT_POINT\"; $dockerd = Join-Path $root 'Program Files\\docker\\dockerd.exe'; $config = Join-Path $root 'docker-config\\daemon.json'; $rule = Get-NetFirewallRule -DisplayName 'Allow Docker from Pods' -ErrorAction SilentlyContinue; if (-not $rule) { New-NetFirewallRule -DisplayName 'Allow Docker from Pods' -Direction Inbound -Protocol TCP -LocalPort 2375 -RemoteAddress 10.244.0.0/16 -Action Allow }; & $dockerd --config-file=$config"]

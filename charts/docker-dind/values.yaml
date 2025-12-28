@@ -11,6 +11,7 @@ fullnameOverride: ""
 
 service:
   type: ClusterIP
+  clusterIP: "None"  # Headless service - DNS resolves directly to pod/node IP
   port: 2375
   targetPort: 2375
   annotations: {}
