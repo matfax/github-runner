@@ -26,7 +26,7 @@ When running on Windows nodes with Calico CNI, the service defaults to a headles
 1. kube-proxy on Windows doesn't properly route ClusterIP traffic to hostNetwork pod endpoints
 2. DNS resolution with a headless service resolves directly to the node IP, bypassing kube-proxy
 
-The Docker daemon container includes a Windows firewall rule that allows inbound traffic to port 2375, relying on your cluster network policy (for example, Calico) to control which pods can access this endpoint.
+The Docker daemon container includes a Windows firewall rule that restricts inbound traffic to port 2375 from the configured pod network CIDR (default: 10.244.0.0/16 for Calico). This provides network-level access control at the Windows host firewall.
 
 ### Option 1: Install from Helm Repository
 
@@ -54,6 +54,11 @@ service:
   type: ClusterIP  # or LoadBalancer for external access
   clusterIP: "None"  # Headless service to work around Windows + Calico kube-proxy not routing ClusterIP traffic to hostNetwork pod endpoints
   port: 2375
+
+# Windows firewall configuration
+firewall:
+  enabled: true
+  podCIDR: "10.244.0.0/16"  # Calico pod network CIDR
 
 # Resource allocation
 resources:
@@ -124,22 +129,23 @@ docker context use remote-windows
 - **Windows hostProcess**: The service runs as `NT AUTHORITY\\SYSTEM` with `hostProcess: true` to access the host's containerd named pipe.
 - **Network Access**: The TCP endpoint should be restricted to trusted applications within the cluster.
 - **No TLS**: By default, TLS is disabled. For production, consider adding TLS certificates.
-- **NetworkPolicy**: A NetworkPolicy is enabled by default to restrict access to pods in the same namespace only. To allow access from specific namespaces:
+- **Windows Firewall**: Access is restricted by Windows firewall rules to the configured pod network CIDR. Configure the pod CIDR to match your cluster's pod network:
 
 ```yaml
-networkPolicy:
+firewall:
   enabled: true
-  allowedNamespaces:
-    - github-actions
-    - ci-cd
+  podCIDR: "10.244.0.0/16"  # Adjust to match your cluster's pod network
 ```
 
-To disable the NetworkPolicy (not recommended for production):
+To allow access from any address (not recommended for production):
 
 ```yaml
-networkPolicy:
-  enabled: false
+firewall:
+  enabled: true
+  podCIDR: ""  # Empty string allows access from any address
 ```
+
+- **NetworkPolicy**: Note that NetworkPolicy may not work effectively with hostNetwork pods. Use the firewall configuration for access control instead.
 
 ## Troubleshooting
 

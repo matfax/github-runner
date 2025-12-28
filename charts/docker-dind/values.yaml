@@ -118,9 +118,18 @@ persistence:
   mountPath: C:/docker-data
 
 # Network policy
+# Note: NetworkPolicy may not work effectively with hostNetwork pods
+# Use firewall.podCIDR for access control instead
 networkPolicy:
-  enabled: true
+  enabled: false
   # List of namespace names that are allowed to access the docker-dind service
   # If empty, only pods in the same namespace can access (default behavior)
   # Example: ["github-actions", "ci-cd"]
   allowedNamespaces: []
+
+# Windows firewall configuration
+firewall:
+  enabled: true
+  # Pod network CIDR to allow access from (e.g., "10.244.0.0/16" for Calico)
+  # If empty, allows access from any address
+  podCIDR: "10.244.0.0/16"
