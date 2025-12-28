@@ -26,7 +26,7 @@ When running on Windows nodes with Calico CNI, the service defaults to a headles
 1. kube-proxy on Windows doesn't properly route ClusterIP traffic to hostNetwork pod endpoints
 2. DNS resolution with a headless service resolves directly to the node IP, bypassing kube-proxy
 
-The Docker daemon container includes a Windows firewall rule that allows inbound traffic from the Calico pod network (10.244.0.0/16) to port 2375.
+The Docker daemon container includes a Windows firewall rule that allows inbound traffic to port 2375, relying on your cluster network policy (for example, Calico) to control which pods can access this endpoint.
 
 ### Option 1: Install from Helm Repository
 
