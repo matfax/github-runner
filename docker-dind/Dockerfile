@@ -38,10 +38,13 @@ RUN Expand-Archive -Path C:/docker-binaries.zip -DestinationPath C:\docker-extra
 
 RUN "[Environment]::SetEnvironmentVariable('PATH', (Join-Path $env:ProgramFiles 'docker') + [IO.Path]::PathSeparator + $env:PATH, [EnvironmentVariableTarget]::Machine)"
 
+# Copy startup script
+COPY start-dockerd.ps1 C:/start-dockerd.ps1
+
 # Expose Docker TCP port
 EXPOSE 2375
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 CMD docker version
 
-CMD ["powershell", "-Command", "$root = \"$env:CONTAINER_SANDBOX_MOUNT_POINT\"; $dockerd = Join-Path $root 'Program Files\\docker\\dockerd.exe'; $config = Join-Path $root 'docker-config\\daemon.json'; & $dockerd --config-file=$config"]
+CMD ["powershell", "-File", "C:/start-dockerd.ps1"]

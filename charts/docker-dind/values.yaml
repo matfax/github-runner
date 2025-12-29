@@ -11,6 +11,7 @@ fullnameOverride: ""
 
 service:
   type: ClusterIP
+  clusterIP: "None"  # Headless service - DNS resolves directly to pod/node IP
   port: 2375
   targetPort: 2375
   annotations: {}
@@ -116,8 +117,11 @@ persistence:
   # Must match docker.dataRoot below
   mountPath: C:/docker-data
 
-# Network policy
-networkPolicy:
-  enabled: false
-  ingress: []
-  egress: []
+# Windows firewall configuration
+firewall:
+  enabled: true
+  # Pod network CIDR to allow access from
+  # Default is 10.244.0.0/16 for Calico - verify this matches your cluster's pod network
+  # Other common ranges: 10.32.0.0/12 (kube-router), 10.200.0.0/16 (kubenet)
+  # If empty, allows access from any address
+  podCIDR: "10.244.0.0/16"

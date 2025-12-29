@@ -20,6 +20,14 @@ This service provides Docker API access via TCP port 2375 by running a Docker da
 - Windows hostProcess container support (Kubernetes 1.23+)
 - Helm 3.x
 
+### Windows Calico CNI Configuration
+
+When running on Windows nodes with Calico CNI, the service defaults to a headless configuration (`clusterIP: None`). This is necessary because:
+1. kube-proxy on Windows doesn't properly route ClusterIP traffic to hostNetwork pod endpoints
+2. DNS resolution with a headless service resolves directly to the node IP, bypassing kube-proxy
+
+The Docker daemon container includes a Windows firewall rule that restricts inbound traffic to port 2375 from the configured pod network CIDR (default: 10.244.0.0/16 for Calico). This provides network-level access control at the Windows host firewall.
+
 ### Option 1: Install from Helm Repository
 
 ```bash
@@ -44,7 +52,13 @@ Key configuration options:
 # Service configuration
 service:
   type: ClusterIP  # or LoadBalancer for external access
+  clusterIP: "None"  # Headless service to work around Windows + Calico kube-proxy not routing ClusterIP traffic to hostNetwork pod endpoints
   port: 2375
+
+# Windows firewall configuration
+firewall:
+  enabled: true
+  podCIDR: "10.244.0.0/16"  # Calico pod network CIDR
 
 # Resource allocation
 resources:
@@ -115,30 +129,20 @@ docker context use remote-windows
 - **Windows hostProcess**: The service runs as `NT AUTHORITY\\SYSTEM` with `hostProcess: true` to access the host's containerd named pipe.
 - **Network Access**: The TCP endpoint should be restricted to trusted applications within the cluster.
 - **No TLS**: By default, TLS is disabled. For production, consider adding TLS certificates.
-- **Use NetworkPolicies**: Restrict which pods can access the Docker daemon:
+- **Windows Firewall**: Access is restricted by Windows firewall rules to the configured pod network CIDR. Configure the pod CIDR to match your cluster's pod network:
 
 ```yaml
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: docker-dind-access
-spec:
-  podSelector:
-    matchLabels:
-      app: docker-dind
-  policyTypes:
-    - Ingress
-  ingress:
-    - from:
-        - namespaceSelector:
-            matchLabels:
-              name: github-actions
-        - podSelector:
-            matchLabels:
-              app: github-runner
-      ports:
-        - protocol: TCP
-          port: 2375
+firewall:
+  enabled: true
+  podCIDR: "10.244.0.0/16"  # Adjust to match your cluster's pod network
+```
+
+To allow access from any address (not recommended for production):
+
+```yaml
+firewall:
+  enabled: true
+  podCIDR: ""  # Empty string allows access from any address
 ```
 
 ## Troubleshooting

@@ -28,6 +28,7 @@ Service Details:
 - Service: {{ $serviceFullName }}
 - Namespace: {{ .Release.Namespace }}
 - Type: {{ .Values.service.type }}
+- ClusterIP: {{ .Values.service.clusterIP }}{{- if eq .Values.service.clusterIP "None" }} (Headless - resolves to node IP){{- end }}
 - Port: {{ $servicePort }}
 - FQDN: {{ $serviceFullName }}.{{ .Release.Namespace }}.svc.cluster.local
 

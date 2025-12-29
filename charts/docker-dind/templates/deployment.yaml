@@ -51,6 +51,10 @@ spec:
           env:
             - name: DOCKER_HOST
               value: {{ .Values.docker.host }}
+            {{- if .Values.firewall.enabled }}
+            - name: FIREWALL_POD_CIDR
+              value: {{ .Values.firewall.podCIDR | quote }}
+            {{- end }}
           livenessProbe:
             {{- toYaml .Values.livenessProbe | nindent 12 }}
           readinessProbe:
