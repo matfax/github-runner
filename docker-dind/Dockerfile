@@ -47,4 +47,4 @@ EXPOSE 2375
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 CMD docker version
 
-CMD ["powershell", "-File", "C:/start-dockerd.ps1"]
+CMD ["powershell", "-File", "C:\start-dockerd.ps1"]
