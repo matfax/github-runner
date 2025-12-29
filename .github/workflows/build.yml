@@ -103,14 +103,14 @@ jobs:
             platform: windows
             tag: windows
             registry: runner
-            buildkit: ${{ github.run_attempt == 1 }}
+            buildkit: false
             test: true
           - os: ${{ github.run_attempt > 1 && 'windows-latest' || 'windows-runner-set' }}
             context: docker-dind
             platform: windows
             tag: windows
             registry: docker-dind
-            buildkit: ${{ github.run_attempt == 1 }}
+            buildkit: false
             test: false
           
     runs-on: ${{ matrix.os }}
