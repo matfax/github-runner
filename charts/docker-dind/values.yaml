@@ -1,21 +1,17 @@
 replicaCount: 1
-
 image:
   repository: ghcr.io/matfax/github-runner/docker-dind
   pullPolicy: IfNotPresent
-  tag: ""
-
+  tag: "@sha256:34bab1c81b947a5224abbdc949ac964a824b799d3d0780d11735eafba75049b4"
 imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
-
 service:
   type: ClusterIP
-  clusterIP: "None"  # Headless service - DNS resolves directly to pod/node IP
+  clusterIP: "None" # Headless service - DNS resolves directly to pod/node IP
   port: 2375
   targetPort: 2375
   annotations: {}
-
 # Docker daemon configuration
 docker:
   # TCP host binding
@@ -37,7 +33,6 @@ docker:
       enabled: true
   # Additional daemon options
   extraArgs: []
-
 # Resource requests and limits
 resources:
   limits:
@@ -46,35 +41,28 @@ resources:
   requests:
     cpu: 500m
     memory: 1Gi
-
 # Node selector for Windows nodes
 nodeSelector:
   kubernetes.io/os: windows
   kubernetes.io/arch: amd64
-
 # Tolerations for Windows nodes
 tolerations:
   - key: "os"
     operator: "Equal"
     value: "windows"
     effect: "NoSchedule"
-
 # Affinity for scheduling
 affinity: {}
-
 # Pod security context - DinD requires privileged
 podSecurityContext: {}
-
 # Host network - Use host network namespace for Docker-in-Docker
 # Required for proper network access and Docker daemon functionality
 hostNetwork: true
-
 # Security context - Windows hostProcess for accessing host containerd
 securityContext:
   windowsOptions:
     hostProcess: true
     runAsUserName: "NT AUTHORITY\\SYSTEM"
-
 # Liveness probe - using Docker API health check
 livenessProbe:
   tcpSocket:
@@ -84,7 +72,6 @@ livenessProbe:
   timeoutSeconds: 10
   successThreshold: 1
   failureThreshold: 3
-
 # Readiness probe
 readinessProbe:
   tcpSocket:
@@ -94,19 +81,15 @@ readinessProbe:
   timeoutSeconds: 5
   successThreshold: 1
   failureThreshold: 3
-
 # Service account configuration
 serviceAccount:
   create: true
   annotations: {}
   name: ""
-
 # Pod annotations
 podAnnotations: {}
-
 # Pod labels
 podLabels: {}
-
 # Persistence for Docker data (images, containers, volumes, build cache)
 persistence:
   enabled: false
@@ -116,7 +99,6 @@ persistence:
   size: 50Gi
   # Must match docker.dataRoot below
   mountPath: C:/docker-data
-
 # Windows firewall configuration
 firewall:
   enabled: true
