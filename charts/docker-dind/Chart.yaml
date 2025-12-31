@@ -2,7 +2,7 @@ apiVersion: v2
 name: docker-dind
 description: Windows Docker-in-Docker service with TCP endpoint
 type: application
-version: 0.0.0-dev
+version: 0.4.2-dev.13
 appVersion: "28.3.1"
 keywords:
   - docker
