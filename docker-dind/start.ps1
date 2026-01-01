@@ -19,6 +19,10 @@ if (Test-Path $k8sConfig) {
     Write-Host "Using baked-in config: $config"
 }
 
+if (-not (Test-Path $config)) {
+    Write-Error "No valid Docker configuration file found. Checked:`n  Kubernetes override: $k8sConfig`n  Baked-in config: $bakedConfig"
+    exit 1
+}
 # Ensure firewall rule exists for pod network access
 Write-Host "Checking firewall rule for pod network access..."
 $rule = Get-NetFirewallRule -DisplayName 'Allow Docker from Pods' -ErrorAction SilentlyContinue
