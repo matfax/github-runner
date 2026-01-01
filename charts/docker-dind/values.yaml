@@ -62,19 +62,6 @@ tolerations:
 # Affinity for scheduling
 affinity: {}
 
-# Pod security context - DinD requires privileged
-podSecurityContext: {}
-
-# Host network - Use host network namespace for Docker-in-Docker
-# Required for proper network access and Docker daemon functionality
-hostNetwork: true
-
-# Security context - Windows hostProcess for accessing host containerd
-securityContext:
-  windowsOptions:
-    hostProcess: true
-    runAsUserName: "NT AUTHORITY\\SYSTEM"
-
 # Liveness probe - using Docker API health check
 livenessProbe:
   tcpSocket:

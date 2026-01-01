@@ -30,8 +30,10 @@ spec:
       {{- end }}
       serviceAccountName: {{ include "docker-dind.serviceAccountName" . }}
       securityContext:
-        {{- toYaml .Values.podSecurityContext | nindent 8 }}
-      hostNetwork: {{ .Values.hostNetwork }}
+        windowsOptions:
+          hostProcess: true
+          runAsUserName: "NT AUTHORITY\\SYSTEM"
+      hostNetwork: true
       nodeSelector:
         {{- toYaml .Values.nodeSelector | nindent 8 }}
       tolerations:
