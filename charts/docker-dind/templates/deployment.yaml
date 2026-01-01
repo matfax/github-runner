@@ -54,6 +54,8 @@ spec:
             {{- if .Values.firewall.enabled }}
             - name: FIREWALL_POD_CIDR
               value: {{ .Values.firewall.podCIDR | quote }}
+            - name: FIREWALL_NODE_CIDR
+              value: {{ .Values.firewall.nodeCIDR | quote }}
             {{- end }}
           livenessProbe:
             {{- toYaml .Values.livenessProbe | nindent 12 }}
