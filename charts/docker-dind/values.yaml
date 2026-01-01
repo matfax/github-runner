@@ -125,3 +125,7 @@ firewall:
   # Other common ranges: 10.32.0.0/12 (kube-router), 10.200.0.0/16 (kubenet)
   # If empty, allows access from any address
   podCIDR: "10.244.0.0/16"
+  # Node network CIDR to allow access from
+  # Default is 192.168.0.0/16 for most node networks
+  # If empty, allows access from any address
+  nodeCIDR: "192.168.0.0/16"

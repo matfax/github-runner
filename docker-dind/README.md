@@ -59,6 +59,7 @@ service:
 firewall:
   enabled: true
   podCIDR: "10.244.0.0/16"  # Calico pod network CIDR
+  nodeCIDR: "192.168.0.0/16"  # Node network CIDR
 
 # Resource allocation
 resources:
@@ -129,12 +130,13 @@ docker context use remote-windows
 - **Windows hostProcess**: The service runs as `NT AUTHORITY\\SYSTEM` with `hostProcess: true` to access the host's containerd named pipe.
 - **Network Access**: The TCP endpoint should be restricted to trusted applications within the cluster.
 - **No TLS**: By default, TLS is disabled. For production, consider adding TLS certificates.
-- **Windows Firewall**: Access is restricted by Windows firewall rules to the configured pod network CIDR. Configure the pod CIDR to match your cluster's pod network:
+- **Windows Firewall**: Access is restricted by Windows firewall rules to the configured pod and node network CIDRs. Configure the CIDRs to match your cluster's networks:
 
 ```yaml
 firewall:
   enabled: true
   podCIDR: "10.244.0.0/16"  # Adjust to match your cluster's pod network
+  nodeCIDR: "192.168.0.0/16"  # Adjust to match your cluster's node network
 ```
 
 To allow access from any address (not recommended for production):
@@ -143,6 +145,7 @@ To allow access from any address (not recommended for production):
 firewall:
   enabled: true
   podCIDR: ""  # Empty string allows access from any address
+  nodeCIDR: ""  # Empty string allows access from any address
 ```
 
 ## Troubleshooting
