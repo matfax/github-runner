@@ -6,7 +6,18 @@ $ErrorActionPreference = 'Stop'
 # Get the sandbox mount point (host filesystem root)
 $root = $env:CONTAINER_SANDBOX_MOUNT_POINT
 $dockerd = Join-Path $root 'Program Files\docker\dockerd.exe'
-$config = Join-Path $root 'docker-config\daemon.json'
+
+# Check for Kubernetes override config first, fall back to baked-in config
+$k8sConfig = Join-Path $root 'docker-config-k8s\daemon.json'
+$bakedConfig = Join-Path $root 'docker-config\daemon.json'
+
+if (Test-Path $k8sConfig) {
+    $config = $k8sConfig
+    Write-Host "Using Kubernetes override config: $config"
+} else {
+    $config = $bakedConfig
+    Write-Host "Using baked-in config: $config"
+}
 
 # Ensure firewall rule exists for pod network access
 Write-Host "Checking firewall rule for pod network access..."
