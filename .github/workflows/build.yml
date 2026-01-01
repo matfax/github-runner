@@ -386,7 +386,7 @@ jobs:
       contents: read
       packages: write
     env:
-      DOCKERD_VERSION: 28.3.1
+      DOCKERD_VERSION: 28.5.2
     outputs:
       docker_dind_digest: ${{ steps.get-digest.outputs.digest }}
       docker_dind_digest_changed: ${{ steps.get-digest.outputs.changed }}
