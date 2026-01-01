@@ -48,6 +48,8 @@ spec:
             {{- toYaml .Values.securityContext | nindent 12 }}
           image: "{{ .Values.image.repository }}{{ if (hasPrefix "@" .Values.image.tag) }}{{ .Values.image.tag }}{{ else }}:{{ .Values.image.tag | default (regexReplaceAllLiteral "^v" .Chart.AppVersion "") }}{{ end }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["powershell"]
+          args: ["-Command", "& (Join-Path $env:CONTAINER_SANDBOX_MOUNT_POINT 'start.ps1')"]
           ports:
             - name: docker
               containerPort: {{ .Values.service.targetPort }}

@@ -64,10 +64,13 @@ RUN Write-Host "Installing CNI plugins v${CNI_GITHUB_VERSION}..."; `
 # Copy startup script
 COPY start.ps1 C:/start.ps1
 
+# Copy default daemon config for non-K8s environments
+COPY daemon.json C:/docker-config/daemon.json
+
 # Expose Docker TCP port
 EXPOSE 2375
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 CMD docker info
 
-CMD ["powershell", "-File", "(Join-Path $env:CONTAINER_SANDBOX_MOUNT_POINT 'start.ps1')"]
+CMD ["dockerd", "--config-file=C:\\docker-config\\daemon.json"]

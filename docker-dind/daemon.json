@@ -1,0 +1,14 @@
+{
+  "hosts": ["tcp://0.0.0.0:2375", "npipe:////./pipe/docker_engine"],
+  "insecure-registries": [
+    "10.0.0.0/8",
+    "172.16.0.0/12",
+    "192.168.0.0/16"
+  ],
+  "builder": {
+    "gc": {
+      "defaultKeepStorage": "16GB",
+      "enabled": true
+    }
+  }
+}
