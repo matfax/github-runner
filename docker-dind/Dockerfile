@@ -38,8 +38,31 @@ RUN Expand-Archive -Path C:/docker-binaries.zip -DestinationPath C:\docker-extra
 
 RUN "[Environment]::SetEnvironmentVariable('PATH', (Join-Path $env:ProgramFiles 'docker') + [IO.Path]::PathSeparator + $env:PATH, [EnvironmentVariableTarget]::Machine)"
 
+# Install BuildKit and dependencies
+ARG BUILDKIT_GITHUB_VERSION=0.18.0 # repository: moby/buildkit
+
+# Install BuildKit
+ADD https://github.com/moby/buildkit/releases/download/v${BUILDKIT_GITHUB_VERSION}/buildkit-v${BUILDKIT_GITHUB_VERSION}.windows-amd64.tar.gz C:/buildkit.tar.gz
+RUN Write-Host "Installing BuildKit v${BUILDKIT_GITHUB_VERSION}..."; `
+    $buildkitRoot = Join-Path $env:ProgramFiles 'buildkit'; `
+    New-Item -ItemType Directory -Force -Path $buildkitRoot | Out-Null; `
+    tar.exe xvf C:\buildkit.tar.gz -C $buildkitRoot; `
+    Remove-Item C:\buildkit.tar.gz -Force
+
+RUN "[Environment]::SetEnvironmentVariable('PATH', (Join-Path $env:ProgramFiles 'buildkit' 'bin') + [IO.Path]::PathSeparator + $env:PATH, [EnvironmentVariableTarget]::Machine)
+
+ARG CNI_GITHUB_VERSION=0.3.1 # repository: microsoft/windows-container-networking
+
+# Install CNI plugins
+ADD https://github.com/microsoft/windows-container-networking/releases/download/v${CNI_GITHUB_VERSION}/windows-container-networking-cni-amd64-v${CNI_GITHUB_VERSION}.zip C:/cni-plugins.zip
+RUN Write-Host "Installing CNI plugins v${CNI_GITHUB_VERSION}..."; `
+    $cniBinDir = Join-Path $env:ProgramFiles 'containerd' 'cni' 'bin'; `
+    New-Item -ItemType Directory -Force -Path $cniBinDir | Out-Null; `
+    Expand-Archive -Path C:\cni-plugins.zip -DestinationPath $cniBinDir; `
+    Remove-Item C:\cni-plugins.zip -Force
+
 # Copy startup script
-COPY start-dockerd.ps1 C:/start-dockerd.ps1
+COPY start.ps1 C:/start.ps1
 
 # Expose Docker TCP port
 EXPOSE 2375
@@ -47,4 +70,4 @@ EXPOSE 2375
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 CMD docker info
 
-CMD ["powershell", "-File", "$env:CONTAINER_SANDBOX_MOUNT_POINT\\start-dockerd.ps1"]
+CMD ["powershell", "-File", "(Join-Path $env:CONTAINER_SANDBOX_MOUNT_POINT 'start.ps1')"]

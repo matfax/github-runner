@@ -51,41 +51,6 @@ RUN choco install docker-cli -y --version 29.0.2
 RUN choco install docker-compose -y --version 5.0.1
 RUN choco install openjdk17 -y --version 17.0.2.20220913
 
-# Install BuildKit and dependencies
-ARG CONTAINERD_GITHUB_VERSION=2.0.0 # repository: containerd/containerd
-ARG BUILDKIT_GITHUB_VERSION=0.18.0 # repository: moby/buildkit
-ARG CNI_GITHUB_VERSION=0.3.1 # repository: microsoft/windows-container-networking
-
-# Install containerd
-ADD https://github.com/containerd/containerd/releases/download/v${CONTAINERD_GITHUB_VERSION}/containerd-${CONTAINERD_GITHUB_VERSION}-windows-amd64.tar.gz C:/containerd.tar.gz
-RUN Write-Host "Installing containerd v${CONTAINERD_GITHUB_VERSION}..."; `
-    $containerdRoot = Join-Path $env:ProgramFiles 'containerd'; `
-    New-Item -ItemType Directory -Force -Path $containerdRoot | Out-Null; `
-    tar.exe xvf C:\containerd.tar.gz -C $containerdRoot; `
-    Remove-Item C:\containerd.tar.gz -Force; `
-    New-Item -ItemType Directory -Force -Path (Join-Path $containerdRoot 'cni' 'bin') | Out-Null; `
-    New-Item -ItemType Directory -Force -Path (Join-Path $containerdRoot 'cni' 'conf') | Out-Null
-
-RUN "[Environment]::SetEnvironmentVariable('PATH', (Join-Path $env:ProgramFiles 'containerd' 'bin') + [IO.Path]::PathSeparator + $env:PATH, [EnvironmentVariableTarget]::Machine)
-
-# Install BuildKit
-ADD https://github.com/moby/buildkit/releases/download/v${BUILDKIT_GITHUB_VERSION}/buildkit-v${BUILDKIT_GITHUB_VERSION}.windows-amd64.tar.gz C:/buildkit.tar.gz
-RUN Write-Host "Installing BuildKit v${BUILDKIT_GITHUB_VERSION}..."; `
-    $buildkitRoot = Join-Path $env:ProgramFiles 'buildkit'; `
-    New-Item -ItemType Directory -Force -Path $buildkitRoot | Out-Null; `
-    tar.exe xvf C:\buildkit.tar.gz -C $buildkitRoot; `
-    Remove-Item C:\buildkit.tar.gz -Force
-
-RUN "[Environment]::SetEnvironmentVariable('PATH', (Join-Path $env:ProgramFiles 'buildkit' 'bin') + [IO.Path]::PathSeparator + $env:PATH, [EnvironmentVariableTarget]::Machine)
-
-# Install CNI plugins
-ADD https://github.com/microsoft/windows-container-networking/releases/download/v${CNI_GITHUB_VERSION}/windows-container-networking-cni-amd64-v${CNI_GITHUB_VERSION}.zip C:/cni-plugins.zip
-RUN Write-Host "Installing CNI plugins v${CNI_GITHUB_VERSION}..."; `
-    $cniBinDir = Join-Path $env:ProgramFiles 'containerd' 'cni' 'bin'; `
-    New-Item -ItemType Directory -Force -Path $cniBinDir | Out-Null; `
-    Expand-Archive -Path C:\cni-plugins.zip -DestinationPath $cniBinDir; `
-    Remove-Item C:\cni-plugins.zip -Force
-
 # Set working directory
 WORKDIR C:/actions-runner
 
