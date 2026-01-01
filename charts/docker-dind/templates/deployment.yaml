@@ -71,7 +71,7 @@ spec:
             {{- toYaml .Values.resources | nindent 12 }}
           volumeMounts:
             - name: docker-config
-              mountPath: C:/docker-config
+              mountPath: C:/docker-config-k8s
             {{- if .Values.persistence.enabled }}
             - name: docker-data
               mountPath: {{ .Values.persistence.mountPath }}
