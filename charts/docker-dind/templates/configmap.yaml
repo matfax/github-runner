@@ -11,6 +11,12 @@ data:
     {{- $_ := set $data "containerd" "\\\\.\\pipe\\containerd-containerd" }}
     {{- /* Explicitly set data-root to ensure persistence works */}}
     {{- $_ := set $data "data-root" .Values.docker.dataRoot }}
+    {{- /* Network configuration to avoid overlay/VNI conflicts */}}
+    {{- if .Values.docker.network }}
+    {{- if .Values.docker.network.bridge }}
+    {{- $_ := set $data "bridge" .Values.docker.network.bridge }}
+    {{- end }}
+    {{- end }}
     {{- if and .Values.docker.builder .Values.docker.builder.gc }}
     {{- $_ := set $data "builder" (dict "gc" (dict "defaultKeepStorage" .Values.docker.builder.gc.defaultKeepStorage "enabled" .Values.docker.builder.gc.enabled)) }}
     {{- end }}

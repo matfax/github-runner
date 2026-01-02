@@ -35,6 +35,12 @@ docker:
       defaultKeepStorage: "16GB"
       # Enable garbage collection
       enabled: true
+  # Docker network configuration
+  network:
+    # Set to "none" to disable default network creation (recommended for HostProcess containers)
+    # This prevents overlay VNI conflicts with AKS Edge CNI
+    # Set to "nat" if you need Docker's default NAT networking
+    bridge: "none"
   # Additional daemon options
   extraArgs: []
 
