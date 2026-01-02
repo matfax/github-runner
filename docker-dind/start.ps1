@@ -66,7 +66,6 @@ if ($rule) {
         }
     } else {
         # Handle both array and single string values for RemoteAddress
-        $currentRemoteAddresses = @()
         if ($addressFilter.RemoteAddress -is [array]) {
             $currentRemoteAddresses = $addressFilter.RemoteAddress
         } else {
