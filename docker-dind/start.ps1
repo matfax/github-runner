@@ -49,7 +49,8 @@ if ($rule) {
     Write-Host "Firewall rule exists. Checking configuration..."
     
     # Get the current remote address configuration
-    $addressFilter = $rule | Get-NetFirewallAddressFilter
+    # Select the first filter if multiple exist
+    $addressFilter = $rule | Get-NetFirewallAddressFilter | Select-Object -First 1
     # Handle both array and single string values for RemoteAddress
     if ($addressFilter.RemoteAddress -is [array]) {
         $currentRemoteAddress = $addressFilter.RemoteAddress -join ','
