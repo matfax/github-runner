@@ -44,7 +44,7 @@ RUN choco install rustup.install -y --version 1.27.1
 RUN rustup.exe default stable
 
 # Install other languages/tooling
-RUN choco install golang -y --version 1.25.3
+RUN choco install golang -y --version 1.25.5
 RUN choco install python -y --version 3.14.2
 RUN choco install nodejs -y --version 25.2.1
 RUN choco install docker-cli -y --version 29.1.3
