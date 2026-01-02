@@ -50,23 +50,30 @@ if ($rule) {
     
     # Get the current remote address configuration
     # Select the first filter if multiple exist
-    $addressFilter = $rule | Get-NetFirewallAddressFilter | Select-Object -First 1
-    # Handle both array and single string values for RemoteAddress
-    if ($addressFilter.RemoteAddress -is [array]) {
-        $currentRemoteAddress = $addressFilter.RemoteAddress -join ','
-    } else {
-        $currentRemoteAddress = $addressFilter.RemoteAddress
-    }
+    $addressFilter = $rule | Get-NetFirewallAddressFilter -ErrorAction SilentlyContinue | Select-Object -First 1
     
-    Write-Host "Current remote address: $currentRemoteAddress"
-    Write-Host "Desired remote address: $desiredRemoteAddress"
-    
-    if ($currentRemoteAddress -ne $desiredRemoteAddress) {
-        Write-Host "Firewall rule configuration has changed. Removing old rule..."
+    if (-not $addressFilter) {
+        Write-Host "Warning: Could not retrieve firewall address filter. Recreating rule..."
         $rule | Remove-NetFirewallRule
         $needsUpdate = $true
     } else {
-        Write-Host "Firewall rule configuration is up to date."
+        # Handle both array and single string values for RemoteAddress
+        if ($addressFilter.RemoteAddress -is [array]) {
+            $currentRemoteAddress = $addressFilter.RemoteAddress -join ','
+        } else {
+            $currentRemoteAddress = $addressFilter.RemoteAddress
+        }
+        
+        Write-Host "Current remote address: $currentRemoteAddress"
+        Write-Host "Desired remote address: $desiredRemoteAddress"
+        
+        if ($currentRemoteAddress -ne $desiredRemoteAddress) {
+            Write-Host "Firewall rule configuration has changed. Removing old rule..."
+            $rule | Remove-NetFirewallRule
+            $needsUpdate = $true
+        } else {
+            Write-Host "Firewall rule configuration is up to date."
+        }
     }
 }
 
