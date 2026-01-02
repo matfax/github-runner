@@ -50,7 +50,12 @@ if ($rule) {
     
     # Get the current remote address configuration
     $addressFilter = $rule | Get-NetFirewallAddressFilter
-    $currentRemoteAddress = $addressFilter.RemoteAddress -join ','
+    # Handle both array and single string values for RemoteAddress
+    if ($addressFilter.RemoteAddress -is [array]) {
+        $currentRemoteAddress = $addressFilter.RemoteAddress -join ','
+    } else {
+        $currentRemoteAddress = $addressFilter.RemoteAddress
+    }
     
     Write-Host "Current remote address: $currentRemoteAddress"
     Write-Host "Desired remote address: $desiredRemoteAddress"
