@@ -40,6 +40,8 @@ if (-not [string]::IsNullOrEmpty($env:FIREWALL_NODE_CIDR)) {
 
 $desiredRemoteAddress = 'Any'
 if ($remoteAddresses.Count -gt 0) {
+    # Sort addresses to ensure consistent comparison
+    $remoteAddresses = $remoteAddresses | Sort-Object
     $desiredRemoteAddress = $remoteAddresses -join ','
 }
 
@@ -54,23 +56,40 @@ if ($rule) {
     
     if (-not $addressFilter) {
         Write-Host "Warning: Could not retrieve firewall address filter. Recreating rule..."
-        $rule | Remove-NetFirewallRule
-        $needsUpdate = $true
+        try {
+            $rule | Remove-NetFirewallRule
+            $rule = $null
+            $needsUpdate = $true
+        } catch {
+            Write-Error "Failed to remove firewall rule: $_"
+            throw
+        }
     } else {
         # Handle both array and single string values for RemoteAddress
+        $currentRemoteAddresses = @()
         if ($addressFilter.RemoteAddress -is [array]) {
-            $currentRemoteAddress = $addressFilter.RemoteAddress -join ','
+            $currentRemoteAddresses = $addressFilter.RemoteAddress
         } else {
-            $currentRemoteAddress = $addressFilter.RemoteAddress
+            $currentRemoteAddresses = @($addressFilter.RemoteAddress)
         }
+        
+        # Sort addresses to ensure consistent comparison
+        $currentRemoteAddresses = $currentRemoteAddresses | Sort-Object
+        $currentRemoteAddress = $currentRemoteAddresses -join ','
         
         Write-Host "Current remote address: $currentRemoteAddress"
         Write-Host "Desired remote address: $desiredRemoteAddress"
         
         if ($currentRemoteAddress -ne $desiredRemoteAddress) {
             Write-Host "Firewall rule configuration has changed. Removing old rule..."
-            $rule | Remove-NetFirewallRule
-            $needsUpdate = $true
+            try {
+                $rule | Remove-NetFirewallRule
+                $rule = $null
+                $needsUpdate = $true
+            } catch {
+                Write-Error "Failed to remove firewall rule: $_"
+                throw
+            }
         } else {
             Write-Host "Firewall rule configuration is up to date."
         }
