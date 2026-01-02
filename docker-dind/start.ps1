@@ -27,23 +27,47 @@ if (-not (Test-Path $config)) {
 Write-Host "Checking firewall rule for pod network access..."
 $rule = Get-NetFirewallRule -DisplayName 'Allow Docker from Pods' -ErrorAction SilentlyContinue
 
-if (-not $rule) {
-    $remoteAddresses = @()
+# Build the desired remote addresses
+$remoteAddresses = @()
+
+if (-not [string]::IsNullOrEmpty($env:FIREWALL_POD_CIDR)) {
+    $remoteAddresses += $env:FIREWALL_POD_CIDR
+}
+
+if (-not [string]::IsNullOrEmpty($env:FIREWALL_NODE_CIDR)) {
+    $remoteAddresses += $env:FIREWALL_NODE_CIDR
+}
+
+$desiredRemoteAddress = 'Any'
+if ($remoteAddresses.Count -gt 0) {
+    $desiredRemoteAddress = $remoteAddresses -join ','
+}
+
+# Check if rule needs to be created or updated
+$needsUpdate = $false
+if ($rule) {
+    Write-Host "Firewall rule exists. Checking configuration..."
     
-    if (-not [string]::IsNullOrEmpty($env:FIREWALL_POD_CIDR)) {
-        $remoteAddresses += $env:FIREWALL_POD_CIDR
-        Write-Host "Adding pod network CIDR: $($env:FIREWALL_POD_CIDR)"
+    # Get the current remote address configuration
+    $addressFilter = $rule | Get-NetFirewallAddressFilter
+    $currentRemoteAddress = $addressFilter.RemoteAddress -join ','
+    
+    Write-Host "Current remote address: $currentRemoteAddress"
+    Write-Host "Desired remote address: $desiredRemoteAddress"
+    
+    if ($currentRemoteAddress -ne $desiredRemoteAddress) {
+        Write-Host "Firewall rule configuration has changed. Removing old rule..."
+        $rule | Remove-NetFirewallRule
+        $needsUpdate = $true
+    } else {
+        Write-Host "Firewall rule configuration is up to date."
     }
-    
-    if (-not [string]::IsNullOrEmpty($env:FIREWALL_NODE_CIDR)) {
-        $remoteAddresses += $env:FIREWALL_NODE_CIDR
-        Write-Host "Adding node network CIDR: $($env:FIREWALL_NODE_CIDR)"
-    }
-    
-    $remoteAddress = 'Any'
+}
+
+# Create the rule if it doesn't exist or needs update
+if (-not $rule -or $needsUpdate) {
     if ($remoteAddresses.Count -gt 0) {
-        $remoteAddress = $remoteAddresses -join ','
-        Write-Host "Creating firewall rule to allow traffic from networks ($remoteAddress) to port 2375..."
+        Write-Host "Creating firewall rule to allow traffic from networks ($desiredRemoteAddress) to port 2375..."
     } else {
         Write-Host "Creating firewall rule to allow traffic from any address to port 2375..."
     }
@@ -53,11 +77,9 @@ if (-not $rule) {
         -Direction Inbound `
         -Protocol TCP `
         -LocalPort 2375 `
-        -RemoteAddress $remoteAddress `
+        -RemoteAddress $desiredRemoteAddress `
         -Action Allow | Out-Null
     Write-Host "Firewall rule created successfully."
-} else {
-    Write-Host "Firewall rule already exists."
 }
 
 # Start Docker daemon
