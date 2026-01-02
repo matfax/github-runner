@@ -14,6 +14,15 @@ data:
     {{- if and .Values.docker.builder .Values.docker.builder.gc }}
     {{- $_ := set $data "builder" (dict "gc" (dict "defaultKeepStorage" .Values.docker.builder.gc.defaultKeepStorage "enabled" .Values.docker.builder.gc.enabled)) }}
     {{- end }}
+    {{- /* Network configuration to avoid overlay/VNI conflicts */}}
+    {{- if .Values.docker.network }}
+    {{- if .Values.docker.network.bridge }}
+    {{- $_ := set $data "bridge" .Values.docker.network.bridge }}
+    {{- end }}
+    {{- if .Values.docker.network.fixedCidr }}
+    {{- $_ := set $data "fixed-cidr" .Values.docker.network.fixedCidr }}
+    {{- end }}
+    {{- end }}
     {{- if .Values.docker.extraArgs }}
     {{- range .Values.docker.extraArgs }}
     {{- $parts := splitn ":" 2 . }}

@@ -35,6 +35,13 @@ docker:
       defaultKeepStorage: "16GB"
       # Enable garbage collection
       enabled: true
+  # Docker NAT network configuration
+  network:
+    # Use NAT only (disable overlay to avoid VNI conflicts with AKS CNI)
+    bridge: "nat"
+    # Fixed CIDR for Docker containers - align with firewall rules
+    # This falls within the 172.16.0.0/12 insecure-registries range
+    fixedCidr: "172.17.0.0/16"
   # Additional daemon options
   extraArgs: []
 
