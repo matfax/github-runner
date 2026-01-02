@@ -39,10 +39,12 @@ if (-not [string]::IsNullOrEmpty($env:FIREWALL_NODE_CIDR)) {
 }
 
 $desiredRemoteAddress = 'Any'
+$desiredRemoteAddressDisplay = 'Any'
 if ($remoteAddresses.Count -gt 0) {
     # Sort addresses to ensure consistent comparison
     $remoteAddresses = $remoteAddresses | Sort-Object
-    $desiredRemoteAddress = $remoteAddresses -join ','
+    $desiredRemoteAddress = $remoteAddresses  # Keep as array for New-NetFirewallRule
+    $desiredRemoteAddressDisplay = $remoteAddresses -join ','  # String for display/comparison
 }
 
 # Check if rule needs to be created or updated
@@ -77,9 +79,9 @@ if ($rule) {
         $currentRemoteAddress = $currentRemoteAddresses -join ','
         
         Write-Host "Current remote address: $currentRemoteAddress"
-        Write-Host "Desired remote address: $desiredRemoteAddress"
+        Write-Host "Desired remote address: $desiredRemoteAddressDisplay"
         
-        if ($currentRemoteAddress -ne $desiredRemoteAddress) {
+        if ($currentRemoteAddress -ne $desiredRemoteAddressDisplay) {
             Write-Host "Firewall rule configuration has changed. Removing old rule..."
             try {
                 $rule | Remove-NetFirewallRule
@@ -98,7 +100,7 @@ if ($rule) {
 # Create the rule if it doesn't exist or needs update
 if (-not $rule -or $needsUpdate) {
     if ($remoteAddresses.Count -gt 0) {
-        Write-Host "Creating firewall rule to allow traffic from networks ($desiredRemoteAddress) to port 2375..."
+        Write-Host "Creating firewall rule to allow traffic from networks ($desiredRemoteAddressDisplay) to port 2375..."
     } else {
         Write-Host "Creating firewall rule to allow traffic from any address to port 2375..."
     }
