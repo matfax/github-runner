@@ -29,7 +29,7 @@ RUN Set-ExecutionPolicy Bypass -Scope Process -Force; `
 RUN "[Environment]::SetEnvironmentVariable('PATH', (Join-Path (Join-Path $env:ProgramData 'chocolatey') 'bin') + [IO.Path]::PathSeparator + $env:PATH, [EnvironmentVariableTarget]::Machine)
 
 # Install PowerShell Core and core tools
-RUN choco install powershell-core -y --version 7.5.0
+RUN choco install powershell-core -y --version 7.5.3
 
 # Switch to PowerShell 7
 SHELL ["pwsh", "-Command", "$ErrorActionPreference = 'Stop'; $ProgressPreference = 'SilentlyContinue';"]
