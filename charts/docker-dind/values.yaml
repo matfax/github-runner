@@ -1,21 +1,17 @@
 replicaCount: 1
-
 image:
   repository: ghcr.io/matfax/github-runner/docker-dind
   pullPolicy: IfNotPresent
-  tag: ""
-
+  tag: "@sha256:ccf47fa85077ec6ff0bfa1b939ce4e4a27c3edc6ad1b0a08392a25c57624b2ac"
 imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
-
 service:
   type: ClusterIP
-  clusterIP: "None"  # Headless service - DNS resolves directly to pod/node IP
+  clusterIP: "None" # Headless service - DNS resolves directly to pod/node IP
   port: 2375
   targetPort: 2375
   annotations: {}
-
 # Docker daemon configuration
 docker:
   # TCP host binding
@@ -43,7 +39,6 @@ docker:
     bridge: "none"
   # Additional daemon options
   extraArgs: []
-
 # Resource requests and limits
 resources:
   limits:
@@ -52,22 +47,18 @@ resources:
   requests:
     cpu: 500m
     memory: 1Gi
-
 # Node selector for Windows nodes
 nodeSelector:
   kubernetes.io/os: windows
   kubernetes.io/arch: amd64
-
 # Tolerations for Windows nodes
 tolerations:
   - key: "os"
     operator: "Equal"
     value: "windows"
     effect: "NoSchedule"
-
 # Affinity for scheduling
 affinity: {}
-
 # Liveness probe - using Docker API health check
 livenessProbe:
   tcpSocket:
@@ -77,7 +68,6 @@ livenessProbe:
   timeoutSeconds: 10
   successThreshold: 1
   failureThreshold: 3
-
 # Readiness probe
 readinessProbe:
   tcpSocket:
@@ -87,19 +77,15 @@ readinessProbe:
   timeoutSeconds: 5
   successThreshold: 1
   failureThreshold: 3
-
 # Service account configuration
 serviceAccount:
   create: true
   annotations: {}
   name: ""
-
 # Pod annotations
 podAnnotations: {}
-
 # Pod labels
 podLabels: {}
-
 # Persistence for Docker data (images, containers, volumes, build cache)
 persistence:
   enabled: false
@@ -109,7 +95,6 @@ persistence:
   size: 64Gi
   # Must match docker.dataRoot below
   mountPath: C:/docker-data
-
 # Windows firewall configuration
 firewall:
   enabled: true
