@@ -39,7 +39,7 @@ RUN choco install git -y --version 2.52.0 --params '/GitAndUnixToolsOnPath'
 RUN choco install gh -y --version 2.83.2
 
 # Install Rust
-RUN choco install rust -y --version 1.91.1
+RUN choco install rust -y --version 1.92.0
 RUN choco install rustup.install -y --version 1.27.1
 RUN rustup.exe default stable
 
