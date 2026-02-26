@@ -48,7 +48,7 @@ RUN choco install golang -y --version 1.25.5
 RUN choco install python -y --version 3.14.2
 RUN choco install nodejs -y --version 25.2.1
 RUN choco install docker-cli -y --version 29.1.3
-RUN choco install docker-compose -y --version 5.0.1
+RUN choco install docker-compose -y --version 5.1.0
 RUN choco install openjdk17 -y --version 17.0.2.20220913
 
 # Set working directory
