@@ -3,6 +3,27 @@ entries:
   docker-dind:
   - apiVersion: v2
     appVersion: 28.3.1
+    created: "2026-06-06T06:37:56.928972868Z"
+    description: Windows Docker-in-Docker service with TCP endpoint
+    digest: 60b80ce82305025579e53b159063ad5cac2d59852a54abef47c269024915ba8e
+    home: https://github.com/matfax/github-runner
+    keywords:
+    - docker
+    - dind
+    - windows
+    - tcp
+    maintainers:
+    - email: mat@fax.fyi
+      name: matfax
+    name: docker-dind
+    sources:
+    - https://github.com/matfax/github-runner/tree/main/docker-dind
+    type: application
+    urls:
+    - https://github.com/matfax/github-runner/releases/download/docker-dind-0.4.2-dev.160/docker-dind-0.4.2-dev.160.tgz
+    version: 0.4.2-dev.160
+  - apiVersion: v2
+    appVersion: 28.3.1
     created: "2026-06-04T06:58:38.631246276Z"
     description: Windows Docker-in-Docker service with TCP endpoint
     digest: 1f2c3903617b33cede5e0a8043aff715341f2e74228406b37787040fc0e9b2bb
@@ -3382,4 +3403,4 @@ entries:
     urls:
     - https://github.com/matfax/github-runner/releases/download/docker-dind-0.4.1/docker-dind-0.4.1.tgz
     version: 0.4.1
-generated: "2026-06-04T06:58:38.631998801Z"
+generated: "2026-06-06T06:37:56.929774123Z"
