@@ -589,7 +589,7 @@ jobs:
             -f sha="$(git rev-parse HEAD)"
 
       - name: Commit and Push Changes
-        uses: iarekylew00t/verified-bot-commit@d7e8eea1f154881e1f9d70a3fd933e740148b7f4 # v2.1.1
+        uses: iarekylew00t/verified-bot-commit@42a042b0407248f3c0acac00c389e729e3476e86 # v2.3.5
         with:
           message: 'chore(chart): bump docker-dind chart to ${{ steps.patch-chart.outputs.version }}'
           ref: ${{ env.TEMP_BRANCH_REF }}
