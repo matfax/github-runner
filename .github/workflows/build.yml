@@ -84,6 +84,9 @@ jobs:
   build-runner:
     name: Build and Test Runner (${{ matrix.context }})
     needs: registration-token
+    permissions:
+      contents: read
+      packages: write
     strategy:
       fail-fast: true
       matrix:
@@ -115,6 +118,9 @@ jobs:
 
   build-docker:
     name: Build Docker Image (${{ matrix.context }})
+    permissions:
+      contents: read
+      packages: write
     strategy:
       fail-fast: true
       matrix:
