@@ -61,10 +61,10 @@ jobs:
       REGISTRY_REF: registry,ref=ghcr.io/${{ github.repository }}/${{ inputs.registry }}:buildcache-${{ inputs.platform }}
     steps:
       - name: Checkout
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Login to GHCR
-        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
+        uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -72,20 +72,20 @@ jobs:
 
       - name: Set up QEMU
         if: inputs.platform == 'linux'
-        uses: docker/setup-qemu-action@2b82ce82d56a2a04d2637cd93a637ae1b359c0a7 # v2.2.0
+        uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
         with:
           platforms: ${{ env.PLATFORMS }}
       
       - name: Set up Docker Buildx
         if: inputs.buildkit
-        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
         with:
           platforms: ${{ env.PLATFORMS }}
           driver: ${{ inputs.buildkit && 'docker-container' || 'docker' }}
 
       - name: Build Multi-Arch Docker Image (using Buildx)
         if: inputs.buildkit && inputs.test
-        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: ${{ inputs.context }}
           tags: ${{ env.TEST_TAG }}
@@ -95,7 +95,7 @@ jobs:
 
       - name: Load Docker Image (using Buildx)
         if: inputs.buildkit && inputs.test
-        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           load: true
           context: ${{ inputs.context }}
@@ -137,7 +137,7 @@ jobs:
 
       - name: Wait for self-hosted jobs
         if: inputs.test
-        uses: yogeshlonkar/wait-for-jobs@3244ca00e7afdbaa306c62813ee95f371bdff93e # v0.4.9
+        uses: yogeshlonkar/wait-for-jobs@8c6359f0b91000818ca5b3b8c6a44db5cf8133b9 # v1.0.4
         with:
           jobs: "Integrated Runner Test (${{ inputs.context }})"
           ignore-skipped: 'false'
@@ -145,7 +145,7 @@ jobs:
 
       - name: Push Docker Image (with Buildx)
         if: inputs.buildkit && (github.event_name == 'release' || github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
-        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           push: true
           context: ${{ inputs.context }}
