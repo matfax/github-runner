@@ -1,0 +1,7 @@
+# Only the watcher scripts belong in the root image context.
+*
+!watch-repos.ps1
+!github-app.ps1
+!kube-launch.ps1
+!registration.ps1
+!runner-api.ps1

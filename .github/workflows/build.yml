@@ -81,240 +81,76 @@ jobs:
           $out = [Convert]::ToBase64String($payload)
           "out=$out" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
 
-  build:
-    name: Build and Launch Runners (${{ matrix.context }})
+  build-runner:
+    name: Build and Test Runner (${{ matrix.context }})
     needs: registration-token
-    permissions:
-      contents: read
-      packages: write
     strategy:
       fail-fast: true
       matrix:
         include:
-          - os: ubuntu-latest
-            context: linux
+          - context: linux
             platform: linux
             tag: ubuntu
             registry: runner
             buildkit: true
             test: true
-          - os: ${{ github.run_attempt > 1 && 'windows-latest' || 'windows-runner-set' }}
-            context: windows
+          - context: windows
             platform: windows
             tag: windows
             registry: runner
             buildkit: false
             test: true
-          - os: ${{ github.run_attempt > 1 && 'windows-latest' || 'windows-runner-set' }}
-            context: docker-dind
+    uses: ./.github/workflows/_build-runner.yml
+    with:
+      context: ${{ matrix.context }}
+      platform: ${{ matrix.platform }}
+      tag: ${{ matrix.tag }}
+      registry: ${{ matrix.registry }}
+      buildkit: ${{ matrix.buildkit }}
+      test: ${{ matrix.test }}
+      reg_token: ${{ needs.registration-token.outputs.reg_token }}
+      run_id: ${{ github.run_id }}
+    secrets:
+      SYM_ENC: ${{ secrets.SYM_ENC }}
+
+  build-docker:
+    name: Build Docker Image (${{ matrix.context }})
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - context: docker-dind
             platform: windows
             tag: windows
             registry: docker-dind
             buildkit: false
             test: false
-          
-    runs-on: ${{ matrix.os }}
-    env:
-      TEST_TAG: runner-${{ matrix.platform }}-local
-      TEST_PROJECT: test-${{ github.run_id }}-${{ matrix.platform }}
-      PLATFORMS: ${{ matrix.platform == 'linux' && 'linux/amd64,linux/arm64' || 'windows/amd64' }}
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - name: Login to GHCR
-        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ github.token }}
-
-      - name: Set up QEMU
-        if: matrix.platform == 'linux'
-        uses: docker/setup-qemu-action@2b82ce82d56a2a04d2637cd93a637ae1b359c0a7 # v2.2.0
-        with:
-          platforms: ${{ env.PLATFORMS }}
-      
-      - name: Set up Docker Buildx
-        if: matrix.buildkit
-        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
-        with:
-          platforms: ${{ env.PLATFORMS }}
-          driver: ${{ matrix.buildkit && 'docker-container' || 'docker' }}
-
-      - name: Build Multi-Arch Docker Image (using Buildx)
-        if: matrix.buildkit && matrix.test
-        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
-        with:
-          context: ${{ matrix.context }}
-          tags: ${{ env.TEST_TAG }}
-          platforms: ${{ env.PLATFORMS }}
-          cache-from: type=registry,ref=${{ env.DOCKER_REPO }}${{ matrix.registry }}:buildcache-${{ matrix.platform }}
-          cache-to: type=gha,mode=max
-      
-      - name: Load Docker Image (using Buildx)
-        if: matrix.buildkit && matrix.test
-        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
-        with:
-          load: true
-          context: ${{ matrix.context }}
-          tags: ${{ env.TEST_TAG }}
-          cache-from: type=gha
-      
-      - name: Build Docker Image (without Buildx)
-        if: matrix.buildkit == false
-        shell: pwsh
-        run: |
-          docker pull ${{ env.DOCKER_REPO }}${{ matrix.registry }}:${{ matrix.tag }} || echo "No cache platform found"
-          docker build -t "${{ env.TEST_TAG }}" ${{ matrix.context }}
-
-      - name: Decode registration token
-        id: decoded-reg-token
-        if: matrix.test
-        shell: pwsh
-        env:
-          SECRET: ${{ secrets.SYM_ENC }}
-          IN: ${{ needs.registration-token.outputs.reg_token }}
-        run: |
-          $payload = [Convert]::FromBase64String($env:IN)
-          if ($payload.Length -lt 17) { throw "IN payload invalid" }
-          $iv = $payload[0..15]
-          $cipher = $payload[16..($payload.Length-1)]
-          $key = [System.Security.Cryptography.SHA256]::HashData([System.Text.Encoding]::UTF8.GetBytes($env:SECRET))
-          $aes = [System.Security.Cryptography.Aes]::Create()
-          $aes.Mode = 'CBC'
-          $aes.Padding = 'PKCS7'
-          $aes.Key = $key
-          $aes.IV = $iv
-          $decryptor = $aes.CreateDecryptor()
-          $plainBytes = $decryptor.TransformFinalBlock($cipher, 0, $cipher.Length)
-          $plain = [System.Text.Encoding]::UTF8.GetString($plainBytes)
-          Write-Output "::add-mask::$plain"
-          "out=$plain" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
-
-      - name: Start runner via launch script
-        if: matrix.test
-        shell: pwsh
-        run: |
-          $regToken = "${{ steps.decoded-reg-token.outputs.out }}"
-          if (-not $regToken) { throw "REG_TOKEN missing" }
-          . ./launch.ps1
-          $labels = "self-hosted,${{ matrix.context }},docker,run-${{ github.run_id }}"
-          $repoObj = [pscustomobject]@{ full_name = "${{ github.repository }}"; html_url = "https://github.com/${{ github.repository }}" }
-          Start-Runner -Repo $repoObj -RegToken $regToken -ComposeProject "${{ env.TEST_PROJECT }}" -Platform "${{ matrix.platform }}" -RunnerIdleTimeoutMinutes $env:RUNNER_IDLE_TIMEOUT_MINUTES -RunnerMaxRestarts $env:RUNNER_MAX_RESTARTS -RunnerLabels $labels -RunnerImage "${{ env.TEST_TAG }}" -RunnerName "${{ env.TEST_PROJECT }}" -WithWsl:$false
-
-      - name: Ensure runner container is running
-        if: matrix.test
-        shell: pwsh
-        run: |
-          $deadline = (Get-Date).AddMinutes(2)
-          $state = $null
-          $containerId = $null
-
-          function Get-ContainerId {
-              param([string]$Project)
-              $id = docker ps --filter "label=com.docker.compose.project=$Project" --format "{{.ID}}" | Select-Object -First 1
-              if (-not $id) {
-                  $id = docker ps -a --filter "label=com.docker.compose.project=$Project" --format "{{.ID}}" | Select-Object -First 1
-              }
-              return $id
-          }
-
-          while ((Get-Date) -lt $deadline) {
-              $containerId = Get-ContainerId -Project "${{ env.TEST_PROJECT }}"
-              if (-not $containerId) {
-                  Start-Sleep -Seconds 5
-                  continue
-              }
-
-              $stateJson = docker inspect --format "{{json .State}}" $containerId 2>$null
-              if ($LASTEXITCODE -ne 0 -or -not $stateJson) {
-                  Start-Sleep -Seconds 5
-                  continue
-              }
-              $state = $stateJson | ConvertFrom-Json
-              if ($state.Running) {
-                  Write-Host "✅ Runner container '$containerId' is running."
-                  break
-              }
-              if ($state.Status -eq "exited") {
-                  Write-Host "ℹ️ Container exited early. State: $(ConvertTo-Json $state -Compress)"
-                  docker logs $containerId
-                  throw "Runner container exited with code $($state.ExitCode)."
-              }
-              Start-Sleep -Seconds 5
-          }
-          if (-not $state -or -not $state.Running) {
-              if ($state) { Write-Host "ℹ️ Final container state: $(ConvertTo-Json $state -Compress)" }
-              if ($containerId) { docker logs $containerId }
-              throw "Runner container for project '${{ env.TEST_PROJECT }}' did not reach running state before timeout."
-          }
-
-      - name: Check runner logs for readiness
-        if: matrix.test
-        shell: pwsh
-        run: |
-          function Get-ContainerId {
-              param([string]$Project)
-              $id = docker ps --filter "label=com.docker.compose.project=$Project" --format "{{.ID}}" | Select-Object -First 1
-              if (-not $id) {
-                  $id = docker ps -a --filter "label=com.docker.compose.project=$Project" --format "{{.ID}}" | Select-Object -First 1
-              }
-              return $id
-          }
-
-          $containerId = Get-ContainerId -Project "${{ env.TEST_PROJECT }}"
-          if (-not $containerId) { throw "No container found for project '${{ env.TEST_PROJECT }}'." }
-
-          $deadline = (Get-Date).AddMinutes(2)
-          $ready = $false
-          while ((Get-Date) -lt $deadline) {
-              $logs = docker logs $containerId 2>$null
-              if ($logs -match "Listening for jobs") {
-                  $ready = $true
-                  break
-              }
-              Start-Sleep -Seconds 5
-          }
-
-          Write-Host "===== runner logs ($containerId) ====="
-          docker logs $containerId
-          Write-Host "======================================"
-
-          if (-not $ready) {
-              throw "Runner container '$containerId' did not log readiness ('Listening for jobs')."
-          }
-
-      - name: Wait for self-hosted jobs
-        if: matrix.test
-        uses: yogeshlonkar/wait-for-jobs@3244ca00e7afdbaa306c62813ee95f371bdff93e # v0.4.9
-        with:
-          jobs: "Integrated Runner Test (${{ matrix.context }})"
-          ignore-skipped: 'false'
-          ttl: '2'
-
-      - name: Push Docker Image (with Buildx)
-        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
-        if: matrix.buildkit && (github.event_name == 'release' || github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
-        env:
-          REGISTRY_REF: registry,ref=${{ env.DOCKER_REPO }}${{ matrix.registry }}:buildcache-${{ matrix.platform }}
-        with:
-          push: true
-          context: ${{ matrix.context }}
-          tags: "${{ env.DOCKER_REPO }}${{ matrix.registry }}:${{ env.DOCKER_RELEASE_PREFIX_OPT }}${{ matrix.tag }}"
-          platforms: ${{ env.PLATFORMS }}
-          cache-from: type=${{ matrix.test && 'gha' || env.REGISTRY_REF }}
-          cache-to: type=${{ env.REGISTRY_REF }},mode=max
-          
-      - name: Push Docker Image (without Buildx)
-        if: matrix.buildkit == false && (github.event_name == 'release' || github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
-        env:
-          RELEASE_TAG: "${{ env.DOCKER_REPO }}${{ matrix.registry }}:${{ env.DOCKER_RELEASE_PREFIX_OPT }}${{ matrix.tag }}"
-        run: |
-          docker tag "${{ env.TEST_TAG }}" "${{ env.RELEASE_TAG }}"
-          docker push "${{ env.RELEASE_TAG }}"
+          - context: .
+            platform: linux
+            tag: latest
+            registry: watcher
+            buildkit: true
+            test: false
+          # Future images can be added here:
+          # - context: some-other-tool
+          #   platform: linux
+          #   tag: latest
+          #   registry: some-tool
+          #   buildkit: true
+          #   test: true
+    uses: ./.github/workflows/_build-docker.yml
+    with:
+      context: ${{ matrix.context }}
+      platform: ${{ matrix.platform }}
+      tag: ${{ matrix.tag }}
+      registry: ${{ matrix.registry }}
+      buildkit: ${{ matrix.buildkit }}
+      test: ${{ matrix.test }}
+      run_id: ${{ github.run_id }}
 
   cancel-on-failure:
     name: Cancel on Build Failure
-    needs: build
+    needs: [build-runner, build-docker]
     if: failure()
     runs-on: ubuntu-latest
     permissions:
@@ -349,7 +185,7 @@ jobs:
 
   merge:
     name: Merge Manifest
-    needs: [build, test]
+    needs: [build-runner, test]
     if: github.event_name == 'release' || github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     permissions:
@@ -379,7 +215,7 @@ jobs:
 
   tag:
     name: Additional Tagging
-    needs: build
+    needs: build-docker
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
     runs-on: ubuntu-latest
     permissions:
@@ -449,7 +285,7 @@ jobs:
   lint-charts:
     name: Test Helm Charts
     runs-on: ubuntu-latest
-    needs: build
+    needs: build-docker
     permissions:
       contents: read
     steps:
@@ -471,6 +307,25 @@ jobs:
 
       - name: Run chart linting
         run: ct lint ${{ github.event != 'pull_request' && '--all' }}
+
+  test-watcher:
+    name: Test Runner Watcher
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+
+      - name: Set up Helm
+        uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # v4.3.1
+
+      - name: Create kind cluster
+        uses: helm/kind-action@1544676c07bb3570fcb70166beaa07c4528fd4aa # v1.15.1
+
+      - name: Install chart and launch runner Jobs
+        shell: pwsh
+        run: .github/scripts/test-watcher.ps1
 
   release-charts:
     name: Release Helm Charts
@@ -619,7 +474,8 @@ jobs:
     name: Complete Workflow
     needs:
       - cleanup-runners
-      - build
+      - build-runner
+      - build-docker
       - lint-charts
       - merge
       - tag
@@ -634,8 +490,12 @@ jobs:
         shell: bash
         run: |
           # Fail only on explicit failures/cancellations, ignore skipped jobs
-          if [ "${{ needs.build.result }}" = "failure" ] || [ "${{ needs.build.result }}" = "cancelled" ]; then
-            echo "build -> ${{ needs.build.result }}"
+          if [ "${{ needs.build-runner.result }}" = "failure" ] || [ "${{ needs.build-runner.result }}" = "cancelled" ]; then
+            echo "build-runner -> ${{ needs.build-runner.result }}"
+            exit 1
+          fi
+          if [ "${{ needs.build-docker.result }}" = "failure" ] || [ "${{ needs.build-docker.result }}" = "cancelled" ]; then
+            echo "build-docker -> ${{ needs.build-docker.result }}"
             exit 1
           fi
           if [ "${{ needs.lint-charts.result }}" = "failure" ] || [ "${{ needs.lint-charts.result }}" = "cancelled" ]; then
@@ -662,7 +522,7 @@ jobs:
 
   cleanup-runners:
     name: Cleanup Runners
-    needs: [build, test]
+    needs: [build-runner, test]
     if: always()
     runs-on: ubuntu-latest
     permissions:

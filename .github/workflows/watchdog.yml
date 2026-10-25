@@ -43,7 +43,7 @@ jobs:
         run: |
           BUILD_JOBS=$(gh run view "${{ github.event.workflow_run.id }}" --json jobs --jq '
             .jobs[] 
-            | select(.name | contains("Build and Launch"))')
+            | select(.name | startswith("Build and Test Runner") or startswith("Build Docker Image"))')
           
           STUCK=$(echo "$BUILD_JOBS" | jq -r 'select(.status == "queued" or .status == "waiting") | .name // empty')
           if [ -z "$STUCK" ]; then

@@ -1,3 +1,2 @@
 config.yml
-connect/1password-credentials.json
-connect/data/
+*.pem

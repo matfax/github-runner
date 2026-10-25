@@ -1,0 +1,30 @@
+The runner watcher is installed in namespace {{ .Release.Namespace }}.
+
+It reads GitHub App credentials from Secret "{{ .Values.githubApp.existingSecret }}". If it does not exist yet:
+
+  kubectl -n {{ .Release.Namespace }} create secret generic {{ .Values.githubApp.existingSecret }} \
+    --from-literal={{ .Values.githubApp.appIdKey }}=<app id> \
+    --from-file={{ .Values.githubApp.privateKeyKey }}=<app>.private-key.pem
+
+{{- if .Values.runners.linux.enabled }}
+
+Linux runners use a privileged Docker sidecar. On RKE2 with the CIS profile (restricted Pod Security),
+allow privileged pods in this namespace:
+
+  kubectl label namespace {{ .Release.Namespace }} pod-security.kubernetes.io/enforce=privileged
+{{- end }}
+{{- if .Values.runners.windows.enabled }}
+
+Windows runners talk to the docker-dind chart on the same node ({{ .Values.runners.windows.dockerHost }}).
+Install it if you have not:
+
+  helm install docker-dind github-runner/docker-dind -n {{ .Release.Namespace }}
+{{- end }}
+
+Watch the watcher:
+
+  kubectl -n {{ .Release.Namespace }} logs -f deploy/{{ include "runner-watcher.fullname" . }}
+
+Runner Jobs it launches:
+
+  kubectl -n {{ .Release.Namespace }} get jobs -l app.kubernetes.io/component=runner

@@ -1,13 +1,14 @@
 function New-RegistrationToken {
     param (
         [Parameter(Mandatory = $true)]
-        [string]$PatToken,
+        [Alias("PatToken")]
+        [string]$Token,
         [Parameter(Mandatory = $true)]
         [string]$RepoFullName
     )
 
-    if ([string]::IsNullOrWhiteSpace($PatToken)) {
-        throw "PAT token is required to mint a registration token."
+    if ([string]::IsNullOrWhiteSpace($Token)) {
+        throw "A GitHub token is required to mint a registration token."
     }
 
     $FullName = $RepoFullName.Trim('/')
@@ -23,7 +24,7 @@ function New-RegistrationToken {
     }
 
     $Headers = @{
-        "Authorization"        = "Bearer $PatToken"
+        "Authorization"        = "Bearer $Token"
         "Accept"               = "application/vnd.github+json"
         "X-GitHub-Api-Version" = "2022-11-28"
     }

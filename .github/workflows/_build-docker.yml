@@ -1,0 +1,121 @@
+name: _build-docker
+
+on:
+  workflow_call:
+    inputs:
+      context:
+        description: "Docker build context directory"
+        required: true
+        type: string
+      platform:
+        description: "Target platform (linux or windows)"
+        required: true
+        type: string
+      tag:
+        description: "Docker tag suffix (e.g., ubuntu, windows)"
+        required: true
+        type: string
+      registry:
+        description: "Image registry name (e.g., docker-dind)"
+        required: true
+        type: string
+      buildkit:
+        description: "Whether to use Docker Buildx/buildkit"
+        required: true
+        type: boolean
+      test:
+        description: "Whether to run basic integration tests"
+        required: true
+        type: boolean
+      run_id:
+        description: "GitHub run ID for unique naming"
+        required: true
+        type: string
+
+env:
+  DOCKER_REPO: ghcr.io/${{ github.repository }}/
+  DOCKER_RELEASE_PREFIX_OPT: ${{ github.event_name == 'release' && github.event.release.tag_name || '' }}${{ github.event_name == 'release' && '-' || '' }}
+
+jobs:
+  build:
+    name: Build and Test Docker Image (${{ inputs.context }})
+    runs-on: ${{ inputs.platform == 'linux' && 'ubuntu-latest' || (github.run_attempt > 1 && 'windows-latest' || 'windows-runner-set') }}
+    permissions:
+      contents: read
+      packages: write
+    env:
+      TEST_TAG: ${{ inputs.registry }}-${{ inputs.platform }}-local
+      PLATFORMS: ${{ inputs.platform == 'linux' && 'linux/amd64,linux/arm64' || 'windows/amd64' }}
+      GHA_CACHE_SCOPE: ${{ inputs.registry }}-${{ inputs.platform }}
+      REGISTRY_REF: registry,ref=ghcr.io/${{ github.repository }}/${{ inputs.registry }}:buildcache-${{ inputs.platform }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Login to GHCR
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Set up QEMU
+        if: inputs.platform == 'linux'
+        uses: docker/setup-qemu-action@2b82ce82d56a2a04d2637cd93a637ae1b359c0a7 # v2.2.0
+        with:
+          platforms: ${{ env.PLATFORMS }}
+      
+      - name: Set up Docker Buildx
+        if: inputs.buildkit
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
+        with:
+          platforms: ${{ env.PLATFORMS }}
+          driver: ${{ inputs.buildkit && 'docker-container' || 'docker' }}
+
+      - name: Build Docker Image (Multi-Arch with Buildx)
+        if: inputs.buildkit
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
+        with:
+          context: ${{ inputs.context }}
+          tags: ${{ env.TEST_TAG }}
+          platforms: ${{ env.PLATFORMS }}
+          cache-from: type=${{ env.REGISTRY_REF }}
+          cache-to: type=gha,mode=max,scope=${{ env.GHA_CACHE_SCOPE }}
+
+      # A multi-platform build cannot be loaded into the local engine; load the host platform only.
+      - name: Load Docker Image (using Buildx)
+        if: inputs.buildkit && inputs.test
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
+        with:
+          load: true
+          context: ${{ inputs.context }}
+          tags: ${{ env.TEST_TAG }}
+          cache-from: type=gha,scope=${{ env.GHA_CACHE_SCOPE }}
+
+      - name: Build Docker Image (Legacy)
+        if: inputs.buildkit == false
+        shell: pwsh
+        run: |
+          docker pull ${{ env.DOCKER_REPO }}${{ inputs.registry }}:${{ inputs.tag }} || echo "No cache platform found"
+          docker build -t "${{ env.TEST_TAG }}" ${{ inputs.context }}
+
+      - name: Test - Verify container starts
+        if: inputs.test
+        shell: pwsh
+        run: .github/scripts/test-container.ps1 -ImageTag "${{ env.TEST_TAG }}" -ContainerName "test-${{ inputs.registry }}-${{ inputs.run_id }}"
+
+      - name: Push Docker Image (with Buildx)
+        if: inputs.buildkit && (github.event_name == 'release' || github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
+        with:
+          push: true
+          context: ${{ inputs.context }}
+          tags: "${{ env.DOCKER_REPO }}${{ inputs.registry }}:${{ env.DOCKER_RELEASE_PREFIX_OPT }}${{ inputs.tag }}"
+          platforms: ${{ env.PLATFORMS }}
+          cache-from: type=gha,scope=${{ env.GHA_CACHE_SCOPE }}
+          cache-to: type=${{ env.REGISTRY_REF }},mode=max
+
+      - name: Push Docker Image (without Buildx)
+        if: inputs.buildkit == false && (github.event_name == 'release' || github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+        shell: pwsh
+        run: .github/scripts/push-image-legacy.ps1 -TestTag ${{ env.TEST_TAG }} -DockerRepo "${{ env.DOCKER_REPO }}" -Registry ${{ inputs.registry }} -ReleasePrefix "${{ env.DOCKER_RELEASE_PREFIX_OPT }}" -Tag ${{ inputs.tag }}
