@@ -39,9 +39,11 @@ watcher:
   resources:
     limits:
       memory: 512Mi
+      ephemeral-storage: 256Mi
     requests:
       cpu: 50m
       memory: 192Mi
+      ephemeral-storage: 64Mi
   nodeSelector:
     kubernetes.io/os: linux
   tolerations: []
@@ -125,10 +127,15 @@ cache:
     storageClass: ""
     accessMode: ReadWriteOnce
     size: 20Gi
+  # Cached data lives on the PVC; ephemeral storage only covers logs and temp files.
   resources:
+    limits:
+      memory: 1Gi
+      ephemeral-storage: 1Gi
     requests:
       cpu: 50m
       memory: 256Mi
+      ephemeral-storage: 128Mi
   nodeSelector:
     kubernetes.io/os: linux
   tolerations: []

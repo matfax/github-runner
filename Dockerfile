@@ -28,15 +28,16 @@ RUN case "${TARGETARCH}" in \
         arm64) PWSH_ARCH=arm64 ;; \
         *) echo "Unsupported architecture: ${TARGETARCH}" >&2; exit 1 ;; \
     esac \
-    && curl -fsSL "https://github.com/PowerShell/PowerShell/releases/download/v${POWERSHELL_GITHUB_VERSION}/powershell-${POWERSHELL_GITHUB_VERSION}-linux-${PWSH_ARCH}.tar.gz" -o /tmp/pwsh.tar.gz \
+    && curl -fsSL --proto '=https' --tlsv1.2 "https://github.com/PowerShell/PowerShell/releases/download/v${POWERSHELL_GITHUB_VERSION}/powershell-${POWERSHELL_GITHUB_VERSION}-linux-${PWSH_ARCH}.tar.gz" -o /tmp/pwsh.tar.gz \
     && mkdir -p /opt/microsoft/powershell \
     && tar -xzf /tmp/pwsh.tar.gz -C /opt/microsoft/powershell \
     && chmod +x /opt/microsoft/powershell/pwsh \
     && ln -s /opt/microsoft/powershell/pwsh /usr/local/bin/pwsh \
     && rm /tmp/pwsh.tar.gz
 
-RUN curl -fsSL "https://dl.k8s.io/release/v${KUBECTL_GITHUB_VERSION}/bin/linux/${TARGETARCH}/kubectl" -o /usr/local/bin/kubectl \
-    && echo "$(curl -fsSL "https://dl.k8s.io/release/v${KUBECTL_GITHUB_VERSION}/bin/linux/${TARGETARCH}/kubectl.sha256")  /usr/local/bin/kubectl" | sha256sum -c - \
+RUN KUBECTL_URL="https://dl.k8s.io/release/v${KUBECTL_GITHUB_VERSION}/bin/linux/${TARGETARCH}/kubectl" \
+    && curl -fsSL --proto '=https' --tlsv1.2 "${KUBECTL_URL}" -o /usr/local/bin/kubectl \
+    && echo "$(curl -fsSL --proto '=https' --tlsv1.2 "${KUBECTL_URL}.sha256")  /usr/local/bin/kubectl" | sha256sum -c - \
     && chmod +x /usr/local/bin/kubectl
 
 RUN pwsh -NoProfile -Command "Install-Module powershell-yaml -RequiredVersion ${POWERSHELL_YAML_VERSION} -Scope AllUsers -Force"

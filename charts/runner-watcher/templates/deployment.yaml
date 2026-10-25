@@ -33,6 +33,8 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       serviceAccountName: {{ include "runner-watcher.serviceAccountName" . }}
+      # The token is mounted explicitly below (kube-api-access) instead of automatically.
+      automountServiceAccountToken: false
       securityContext:
         runAsNonRoot: true
         runAsUser: 10001
@@ -94,7 +96,28 @@ spec:
             - name: github-app
               mountPath: /etc/github-app
               readOnly: true
+            - name: kube-api-access
+              mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+              readOnly: true
       volumes:
+        # Same token, CA and namespace files the kubelet would mount automatically; kubectl reads them in-cluster.
+        - name: kube-api-access
+          projected:
+            defaultMode: 0444
+            sources:
+              - serviceAccountToken:
+                  path: token
+                  expirationSeconds: 3607
+              - configMap:
+                  name: kube-root-ca.crt
+                  items:
+                    - key: ca.crt
+                      path: ca.crt
+              - downwardAPI:
+                  items:
+                    - path: namespace
+                      fieldRef:
+                        fieldPath: metadata.namespace
         - name: config
           configMap:
             name: {{ include "runner-watcher.fullname" . }}
