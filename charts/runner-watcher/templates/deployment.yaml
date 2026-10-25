@@ -1,0 +1,130 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "runner-watcher.fullname" . }}
+  labels:
+    {{- include "runner-watcher.labels" . | nindent 4 }}
+    app.kubernetes.io/component: watcher
+spec:
+  # A single watcher; two would race to launch runners for the same queued job.
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "runner-watcher.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: watcher
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- with .Values.watcher.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "runner-watcher.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: watcher
+        {{- with .Values.watcher.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "runner-watcher.serviceAccountName" . }}
+      # The token is mounted explicitly below (kube-api-access) instead of automatically.
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      {{- with .Values.watcher.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.watcher.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.watcher.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: watcher
+          image: {{ include "runner-watcher.image" .Values.image | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args: ["-ConfigPath", "/etc/github-runner/config.yml"]
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          env:
+            - name: RUNNER_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: GITHUB_APP_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.githubApp.existingSecret }}
+                  key: {{ .Values.githubApp.appIdKey }}
+            - name: GITHUB_APP_INSTALLATION_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.githubApp.existingSecret }}
+                  key: {{ .Values.githubApp.installationIdKey }}
+                  optional: true
+            - name: GITHUB_APP_PRIVATE_KEY_PATH
+              value: /etc/github-app/private-key.pem
+          # The watcher touches this file at the start of every poll cycle.
+          livenessProbe:
+            exec:
+              command: ["sh", "-c", "test -n \"$(find /tmp/watcher-heartbeat -mmin -{{ .Values.watcher.livenessMinutes }})\""]
+            initialDelaySeconds: 60
+            periodSeconds: 60
+          resources:
+            {{- toYaml .Values.watcher.resources | nindent 12 }}
+          volumeMounts:
+            - name: config
+              mountPath: /etc/github-runner
+              readOnly: true
+            - name: github-app
+              mountPath: /etc/github-app
+              readOnly: true
+            - name: kube-api-access
+              mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+              readOnly: true
+      volumes:
+        # Same token, CA and namespace files the kubelet would mount automatically; kubectl reads them in-cluster.
+        - name: kube-api-access
+          projected:
+            defaultMode: 0444
+            sources:
+              - serviceAccountToken:
+                  path: token
+                  expirationSeconds: 3607
+              - configMap:
+                  name: kube-root-ca.crt
+                  items:
+                    - key: ca.crt
+                      path: ca.crt
+              - downwardAPI:
+                  items:
+                    - path: namespace
+                      fieldRef:
+                        fieldPath: metadata.namespace
+        - name: config
+          configMap:
+            name: {{ include "runner-watcher.fullname" . }}
+        - name: github-app
+          secret:
+            secretName: {{ .Values.githubApp.existingSecret }}
+            defaultMode: 0440
+            items:
+              - key: {{ .Values.githubApp.privateKeyKey }}
+                path: private-key.pem

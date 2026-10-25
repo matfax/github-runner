@@ -1,0 +1,141 @@
+image:
+  repository: ghcr.io/matfax/github-runner/watcher
+  pullPolicy: Always
+  tag: "latest"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+# Kubernetes cluster DNS domain, used to build the cache server URL handed to runners
+clusterDomain: cluster.local
+
+# GitHub App credentials. Create the Secret before installing:
+#   kubectl create secret generic github-app \
+#     --from-literal=app-id=<id> \
+#     --from-literal=installation-id=<id> \   # optional
+#     --from-file=private-key=<app>.private-key.pem
+githubApp:
+  existingSecret: github-app
+  appIdKey: app-id
+  installationIdKey: installation-id
+  privateKeyKey: private-key
+
+# Watcher behavior (rendered into config.yml)
+watcher:
+  # Optional GitHub owner filter; also picks the App installation when the App is installed more than once
+  owner: ""
+  includeRepos: []
+  excludeRepos: []
+  pollSeconds: 30
+  maxLaunchPerCycle: 2
+  requiredLabels:
+    - self-hosted
+    - orchestrated
+  windowsLabelRegex: "(?i)windows"
+  linuxLabelRegex: "(?i)linux"
+  # Restart the watcher if a poll cycle has not completed within this many minutes
+  livenessMinutes: 15
+  resources:
+    limits:
+      memory: 512Mi
+      ephemeral-storage: 256Mi
+    requests:
+      cpu: 50m
+      memory: 192Mi
+      ephemeral-storage: 64Mi
+  nodeSelector:
+    kubernetes.io/os: linux
+  tolerations: []
+  affinity: {}
+  podAnnotations: {}
+  podLabels: {}
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+# Runner Jobs launched by the watcher
+runners:
+  idleTimeoutMinutes: 15
+  maxRestarts: 20
+  # Finished Jobs (and their registration-token Secrets) are deleted after this many seconds
+  ttlSecondsAfterFinished: 300
+
+  linux:
+    enabled: true
+    image:
+      repository: ghcr.io/matfax/github-runner/runner
+      pullPolicy: Always
+      tag: "ubuntu"
+    resources:
+      requests:
+        cpu: 500m
+        memory: 1Gi
+    nodeSelector:
+      kubernetes.io/os: linux
+    tolerations: []
+    affinity: {}
+    # Docker daemon sidecar; reachable only on the pod's loopback
+    dind:
+      image:
+        repository: docker
+        pullPolicy: IfNotPresent
+        tag: "28.5.2-dind@sha256:2a232a42256f70d78e3cc5d2b5d6b3276710a0de0596c145f627ecfae90282ac"
+      resources:
+        requests:
+          cpu: 250m
+          memory: 512Mi
+
+  windows:
+    enabled: true
+    image:
+      repository: ghcr.io/matfax/github-runner/runner
+      pullPolicy: IfNotPresent
+      tag: "windows"
+    # Docker endpoint of the docker-dind chart on the same node ($(NODE_IP) is the node's IP)
+    dockerHost: "tcp://$(NODE_IP):2375"
+    # Schedule only onto nodes running a pod with these labels (the docker-dind chart). Set {} to disable.
+    dockerDindSelector:
+      app.kubernetes.io/name: docker-dind
+    resources:
+      requests:
+        cpu: 500m
+        memory: 2Gi
+    nodeSelector:
+      kubernetes.io/os: windows
+    tolerations:
+      - key: "os"
+        operator: "Equal"
+        value: "windows"
+        effect: "NoSchedule"
+
+# GitHub Actions cache server shared by all runners
+cache:
+  enabled: true
+  image:
+    repository: ghcr.io/falcondev-oss/github-actions-cache-server
+    pullPolicy: IfNotPresent
+    tag: "latest@sha256:41530ac4215fddcc0bdfd87b5069f40a226572b1325885f02e9173068cdc1872"
+  cleanupOlderThanDays: 30
+  service:
+    port: 3000
+  persistence:
+    enabled: true
+    existingClaim: ""
+    storageClass: ""
+    accessMode: ReadWriteOnce
+    size: 20Gi
+  # Cached data lives on the PVC; ephemeral storage only covers logs and temp files.
+  resources:
+    limits:
+      memory: 1Gi
+      ephemeral-storage: 1Gi
+    requests:
+      cpu: 50m
+      memory: 256Mi
+      ephemeral-storage: 128Mi
+  nodeSelector:
+    kubernetes.io/os: linux
+  tolerations: []

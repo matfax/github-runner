@@ -1,0 +1,18 @@
+apiVersion: v2
+name: runner-watcher
+description: Launches ephemeral GitHub Actions runner Jobs on demand for every repo a GitHub App is installed on
+type: application
+version: 0.1.0
+appVersion: "latest"
+kubeVersion: ">=1.29.0-0"
+keywords:
+  - github
+  - actions
+  - runner
+  - rke2
+home: https://github.com/matfax/github-runner
+sources:
+  - https://github.com/matfax/github-runner
+maintainers:
+  - name: matfax
+    email: mat@fax.fyi

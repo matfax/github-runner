@@ -4,90 +4,10 @@ param (
 
 $ErrorActionPreference = "Stop"
 
-. "$PSScriptRoot/launch.ps1"
+. "$PSScriptRoot/github-app.ps1"
+. "$PSScriptRoot/kube-launch.ps1"
 . "$PSScriptRoot/registration.ps1"
 . "$PSScriptRoot/runner-api.ps1"
-
-function Parse-OpSecretRef {
-    param ([string]$SecretRef)
-
-    if ([string]::IsNullOrWhiteSpace($SecretRef)) {
-        throw "connectSecretRef is required (format: op://Vault/Item/Field)."
-    }
-
-    if ($SecretRef -notmatch '^op:\/\/([^\/]+)\/([^\/]+)\/(.+)$') {
-        throw "connectSecretRef must be in format op://Vault/Item/Field (got '$SecretRef')."
-    }
-
-    return @{
-        Vault = $Matches[1]
-        Item  = $Matches[2]
-        Field = $Matches[3]
-    }
-}
-
-function Ensure-ConnectServer {
-    $ConnectDir = Join-Path $PSScriptRoot "connect"
-    $ComposePath = Join-Path $ConnectDir "docker-compose.yml"
-    $CredsPath = Join-Path $ConnectDir "1password-credentials.json"
-
-    if (-not (Test-Path $ComposePath)) {
-        throw "1Password Connect compose file not found at $ComposePath"
-    }
-
-    if (-not (Test-Path $CredsPath)) {
-        throw "1Password Connect credentials file missing at $CredsPath. Follow https://developer.1password.com/docs/connect/get-started/ to create it."
-    }
-
-    if (-not (Get-Command wsl -ErrorAction SilentlyContinue)) {
-        throw "WSL is required to start the 1Password Connect stack (Linux container). Install/enable WSL."
-    }
-
-    Write-Host "🔗 Ensuring 1Password Connect is running in WSL..." -ForegroundColor Cyan
-    Push-Location $ConnectDir
-    try {
-        wsl docker compose up -d
-        $ExitCode = $LASTEXITCODE
-    } finally {
-        Pop-Location
-    }
-
-    if ($ExitCode -ne 0) {
-        throw "Failed to start 1Password Connect via WSL (exit code $ExitCode)."
-    } else {
-        Write-Host "   1Password Connect stack is up." -ForegroundColor Gray
-    }
-}
-
-function Ensure-CacheServer {
-    $CacheDir = Join-Path $PSScriptRoot "caching"
-    $ComposePath = Join-Path $CacheDir "docker-compose.yml"
-
-    if (-not (Test-Path $ComposePath)) {
-        Write-Warning "Cache compose file not found at $ComposePath"
-        return
-    }
-
-    if (-not (Get-Command wsl -ErrorAction SilentlyContinue)) {
-        Write-Warning "WSL is not available. Skipping cache server startup."
-        return
-    }
-
-    Write-Host "💾 Ensuring cache server is running in WSL..." -ForegroundColor Cyan
-    Push-Location $CacheDir
-    try {
-        wsl docker compose up -d
-        $ExitCode = $LASTEXITCODE
-    } finally {
-        Pop-Location
-    }
-
-    if ($ExitCode -ne 0) {
-        Write-Warning "Failed to start cache server via WSL (exit code $ExitCode)."
-    } else {
-        Write-Host "   Cache server stack is up (shared for all projects)." -ForegroundColor Gray
-    }
-}
 
 function Import-YamlConfig {
     param (
@@ -121,7 +41,7 @@ function Coerce-Array {
     return @($Value | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
 }
 
-function Get-AdminRepos {
+function Get-InstallationRepos {
     param (
         [hashtable]$Headers
     )
@@ -131,24 +51,24 @@ function Get-AdminRepos {
 
     while ($true) {
         try {
-            $Result = Invoke-RestMethod -Uri "https://api.github.com/user/repos?per_page=100&page=$Page" -Headers $Headers -ErrorAction Stop
+            $Result = Invoke-RestMethod -Uri "https://api.github.com/installation/repositories?per_page=100&page=$Page" -Headers $Headers -ErrorAction Stop
         } catch {
             throw "Failed to list repos (page $Page): $($_.Exception.Message)"
         }
-        if (-not $Result -or $Result.Count -eq 0) {
+        if (-not $Result.repositories -or $Result.repositories.Count -eq 0) {
             break
         }
 
-        $Repos += $Result
+        $Repos += $Result.repositories
 
-        if ($Result.Count -lt 100) {
+        if ($Result.repositories.Count -lt 100) {
             break
         }
 
         $Page++
     }
 
-    return $Repos | Where-Object { $_.permissions.admin -eq $true }
+    return $Repos | Where-Object { -not $_.archived }
 }
 
 function Get-QueuedSelfHostedRun {
@@ -162,7 +82,7 @@ function Get-QueuedSelfHostedRun {
     try {
         $Runs = Invoke-RestMethod -Uri "https://api.github.com/repos/$FullName/actions/runs?status=queued&per_page=5" -Headers $Headers -ErrorAction Stop
     } catch {
-        Write-Warning "Could not list runs for $FullName: $($_.Exception.Message)"
+        Write-Warning "Could not list runs for ${FullName}: $($_.Exception.Message)"
         return $null
     }
 
@@ -190,7 +110,7 @@ function Get-QueuedSelfHostedRun {
     return $null
 }
 
-function Get-ComposeProject {
+function Get-RunnerProject {
     param (
         [string]$FullName
     )
@@ -198,33 +118,11 @@ function Get-ComposeProject {
     return ($FullName -replace '/', '-') -replace '[^A-Za-z0-9_-]', '-'
 }
 
-function HasActiveRunner {
-    param (
-        [string]$ComposeProject
-    )
-
-    $Containers = docker ps --filter "label=com.docker.compose.project=$ComposeProject" -q
-    return -not [string]::IsNullOrWhiteSpace(($Containers | Select-Object -First 1))
-}
-
-function HasActiveRunnerLinux {
-    param (
-        [string]$ComposeProject
-    )
-
-    if (-not (Get-Command wsl -ErrorAction SilentlyContinue)) {
-        Write-Warning "WSL is not available; cannot check Linux runner state."
-        return $false
-    }
-
-    $Containers = wsl docker ps --filter "label=com.docker.compose.project=$ComposeProject" -q
-    return -not [string]::IsNullOrWhiteSpace(($Containers | Select-Object -First 1))
-}
-
 function Remove-StaleRunners {
     param (
         [hashtable]$Headers,
         [ref]$LaunchRegistry,
+        [string]$Namespace,
         [int]$IdleTimeoutMinutes,
         [int]$CleanupGraceMinutes = 10
     )
@@ -235,15 +133,8 @@ function Remove-StaleRunners {
         $Entry = $LaunchRegistry.Value[$Key]
         if (-not $Entry) { continue }
 
-        $ComposeProject = $Key
-        $Platform = $Entry.Platform
-        $IsActive = $false
-        if ($Platform -eq "linux") {
-            $IsActive = HasActiveRunnerLinux -ComposeProject $ComposeProject
-        } else {
-            $IsActive = HasActiveRunner -ComposeProject $ComposeProject
-        }
-        if ($IsActive) { continue }
+        $Project = $Key
+        if (Test-KubeRunnerActive -Namespace $Namespace -Project $Project) { continue }
 
         $AgeMinutes = ($Now - $Entry.LaunchedAt).TotalMinutes
         if ($AgeMinutes -lt ($IdleTimeoutMinutes + $CleanupGraceMinutes)) { continue }
@@ -261,82 +152,23 @@ function Remove-StaleRunners {
             continue
         }
 
-        Write-Host "🧹 Removed stale runner '$($Entry.RunnerName)' (project $ComposeProject)." -ForegroundColor Yellow
+        Write-Host "🧹 Removed stale runner '$($Entry.RunnerName)' (project $Project)." -ForegroundColor Yellow
         $null = $LaunchRegistry.Value.Remove($Key)
     }
 }
 
-function Resolve-ConnectIds {
-    param (
-        [Parameter(Mandatory = $true)]
-        [string]$ConnectUrl,
-        [Parameter(Mandatory = $true)]
-        [string]$ConnectToken,
-        [Parameter(Mandatory = $true)]
-        [string]$VaultName,
-        [Parameter(Mandatory = $true)]
-        [string]$ItemName
-    )
+function Get-RunnerNamespace {
+    param ([string]$Configured)
 
-    $Headers = @{ "Authorization" = "Bearer $ConnectToken" }
+    if ($Configured) { return $Configured }
+    if ($env:RUNNER_NAMESPACE) { return $env:RUNNER_NAMESPACE }
 
-    try {
-        $Vaults = Invoke-RestMethod -Uri "$ConnectUrl/v1/vaults" -Headers $Headers -Method Get -ErrorAction Stop
-    } catch {
-        throw "Failed to list vaults from 1Password Connect: $($_.Exception.Message)"
+    $ServiceAccountNamespace = "/var/run/secrets/kubernetes.io/serviceaccount/namespace"
+    if (Test-Path -LiteralPath $ServiceAccountNamespace) {
+        return (Get-Content -LiteralPath $ServiceAccountNamespace -Raw).Trim()
     }
 
-    $Vault = $Vaults | Where-Object { $_.name -eq $VaultName } | Select-Object -First 1
-    if (-not $Vault) {
-        throw "Vault '$VaultName' not found in Connect."
-    }
-
-    try {
-        $Items = Invoke-RestMethod -Uri "$ConnectUrl/v1/vaults/$($Vault.id)/items" -Headers $Headers -Method Get -ErrorAction Stop
-    } catch {
-        throw "Failed to list items for vault '$VaultName': $($_.Exception.Message)"
-    }
-
-    $Item = $Items | Where-Object { $_.title -eq $ItemName } | Select-Object -First 1
-    if (-not $Item) {
-        throw "Item '$ItemName' not found in vault '$VaultName'."
-    }
-
-    return @{
-        VaultId = $Vault.id
-        ItemId  = $Item.id
-    }
-}
-
-function Get-PatFromConnect {
-    param (
-        [Parameter(Mandatory = $true)]
-        [string]$ConnectUrl,
-        [Parameter(Mandatory = $true)]
-        [string]$ConnectToken,
-        [Parameter(Mandatory = $true)]
-        [string]$SecretRef
-    )
-
-    $Parsed = Parse-OpSecretRef -SecretRef $SecretRef
-    $Resolution = Resolve-ConnectIds -ConnectUrl $ConnectUrl -ConnectToken $ConnectToken -VaultName $Parsed.Vault -ItemName $Parsed.Item
-
-    $Headers = @{ "Authorization" = "Bearer $ConnectToken" }
-
-    $Uri = "$ConnectUrl/v1/vaults/$($Resolution.VaultId)/items/$($Resolution.ItemId)"
-    try {
-        $Item = Invoke-RestMethod -Uri $Uri -Headers $Headers -Method Get -ErrorAction Stop
-    } catch {
-        throw "Failed to fetch PAT item from 1Password Connect: $($_.Exception.Message)"
-    }
-
-    $FieldName = $Parsed.Field
-    $Field = $Item.fields | Where-Object { $_.label -eq $FieldName -or $_.purpose -eq "PASSWORD" } | Select-Object -First 1
-    if (-not $Field -or [string]::IsNullOrWhiteSpace($Field.value)) {
-        throw "Field '$FieldName' was not found or was empty in the Connect item."
-    }
-
-    return $Field.value
+    throw "Runner namespace unknown. Set 'namespace' in the config or RUNNER_NAMESPACE."
 }
 
 $Config = Import-YamlConfig -Path $ConfigPath
@@ -351,41 +183,62 @@ $WindowsLabelRegex = if ($Config.windowsLabelRegex) { [regex]$Config.windowsLabe
 $LinuxLabelRegex = if ($Config.linuxLabelRegex) { [regex]$Config.linuxLabelRegex } else { [regex]"(?i)linux" }
 $RunnerIdleTimeoutMinutes = if ($Config.runnerIdleTimeoutMinutes) { [int]$Config.runnerIdleTimeoutMinutes } else { 15 }
 $RunnerMaxRestarts = if ($Config.runnerMaxRestarts) { [int]$Config.runnerMaxRestarts } else { 20 }
-$ConnectUrl = $Config.connectUrl
-$ConnectToken = $Config.connectToken
-$ConnectSecretRef = $Config.connectSecretRef
+$RunnerTemplates = if ($Config.runnerTemplates) { $Config.runnerTemplates } else { @{} }
+$Namespace = Get-RunnerNamespace -Configured $Config.namespace
 $RunnerCleanupGraceMinutes = 10
+$HeartbeatPath = Join-Path ([IO.Path]::GetTempPath()) "watcher-heartbeat"
 
-if ([string]::IsNullOrWhiteSpace($ConnectUrl) -or
-    [string]::IsNullOrWhiteSpace($ConnectToken) -or
-    [string]::IsNullOrWhiteSpace($ConnectSecretRef)) {
-    throw "connectUrl, connectToken, and connectSecretRef must be set in $ConfigPath for 1Password Connect."
+$GitHubAppId = $env:GITHUB_APP_ID
+$GitHubAppInstallationId = $env:GITHUB_APP_INSTALLATION_ID
+$GitHubAppPrivateKeyPath = $env:GITHUB_APP_PRIVATE_KEY_PATH
+
+if ([string]::IsNullOrWhiteSpace($GitHubAppId) -or [string]::IsNullOrWhiteSpace($GitHubAppPrivateKeyPath)) {
+    throw "GITHUB_APP_ID and GITHUB_APP_PRIVATE_KEY_PATH must be set (GITHUB_APP_INSTALLATION_ID is optional)."
+}
+
+$Platforms = @(
+    @{
+        Name          = "windows"
+        Suffix        = "-win"
+        OsRegex       = $WindowsLabelRegex
+        Template      = $RunnerTemplates.windows
+        LaunchMessage = "🚀 Queued Windows self-hosted job detected for {0}. Launching runner..."
+    },
+    @{
+        Name          = "linux"
+        Suffix        = "-linux"
+        OsRegex       = $LinuxLabelRegex
+        Template      = $RunnerTemplates.linux
+        LaunchMessage = "🐧 Queued Linux self-hosted job detected for {0}. Launching runner..."
+    }
+) | Where-Object { $_.Template }
+
+if (-not $Platforms) {
+    throw "No runner templates configured (runnerTemplates.linux / runnerTemplates.windows in $ConfigPath)."
 }
 
 $SeenRunIds = @{}
 $LaunchRegistry = @{}
 
-Write-Host "👀 Watching for queued self-hosted jobs across repos you administer..." -ForegroundColor Cyan
-
-Ensure-ConnectServer
-Ensure-CacheServer
+Write-Host "👀 Watching for queued self-hosted jobs ($(($Platforms | ForEach-Object { $_.Name }) -join ', ')) in namespace $Namespace..." -ForegroundColor Cyan
 
 while ($true) {
     $Launched = 0
-    $PatToken = $null
+    $Token = $null
     $Headers = $null
+    Set-Content -LiteralPath $HeartbeatPath -Value (Get-Date -Format o)
 
     try {
-        $PatToken = Get-PatFromConnect -ConnectUrl $ConnectUrl -ConnectToken $ConnectToken -SecretRef $ConnectSecretRef
-        $Headers = New-GitHubHeaders -PatToken $PatToken
+        $Token = Get-GitHubAppToken -AppId $GitHubAppId -PrivateKeyPath $GitHubAppPrivateKeyPath -InstallationId $GitHubAppInstallationId -Owner $Owner
+        $Headers = New-GitHubHeaders -Token $Token
     } catch {
-        Write-Warning "Failed to retrieve PAT from 1Password Connect: $($_.Exception.Message)"
+        Write-Warning "Failed to obtain GitHub App installation token: $($_.Exception.Message)"
         Start-Sleep -Seconds $PollSeconds
         continue
     }
 
     try {
-        $Repos = Get-AdminRepos -Headers $Headers
+        $Repos = Get-InstallationRepos -Headers $Headers
     } catch {
         Write-Warning "Failed to list repositories: $($_.Exception.Message)"
         Start-Sleep -Seconds $PollSeconds
@@ -409,54 +262,44 @@ while ($true) {
             break
         }
 
-        $BaseComposeProject = Get-ComposeProject -FullName $Repo.full_name
+        $BaseProject = Get-RunnerProject -FullName $Repo.full_name
         $RegTokenForRepo = $null
-
-        $Platforms = @(
-            @{
-                Name           = "windows"
-                Suffix         = "-win"
-                OsRegex        = $WindowsLabelRegex
-                WithWsl        = $false
-                ActiveCheck    = { param($Project) HasActiveRunner -ComposeProject $Project }
-                LaunchMessage  = "🚀 Queued Windows self-hosted job detected for $($Repo.full_name). Launching runner..."
-            },
-            @{
-                Name           = "linux"
-                Suffix         = "-linux"
-                OsRegex        = $LinuxLabelRegex
-                WithWsl        = $true
-                ActiveCheck    = { param($Project) HasActiveRunnerLinux -ComposeProject $Project }
-                LaunchMessage  = "🐧 Queued Linux self-hosted job detected for $($Repo.full_name). Launching runner..."
-            }
-        )
 
         foreach ($Platform in $Platforms) {
             if ($Launched -ge $MaxLaunchPerCycle) { break }
 
-            $ComposeProject = "$BaseComposeProject$($Platform.Suffix)"
-            $IsActive = & $Platform.ActiveCheck $ComposeProject
-            if ($IsActive) { continue }
+            $Project = "$BaseProject$($Platform.Suffix)"
+            try {
+                if (Test-KubeRunnerActive -Namespace $Namespace -Project $Project) { continue }
+            } catch {
+                Write-Warning "Could not check runner Jobs for ${Project}: $($_.Exception.Message)"
+                continue
+            }
 
             $Queued = Get-QueuedSelfHostedRun -Headers $Headers -FullName $Repo.full_name -RequiredLabels $RequiredLabels -OsLabelRegex $Platform.OsRegex
             if (-not $Queued -or $SeenRunIds.ContainsKey($Queued.RunId)) { continue }
 
-            Write-Host $Platform.LaunchMessage -ForegroundColor Green
+            Write-Host ($Platform.LaunchMessage -f $Repo.full_name) -ForegroundColor Green
             $SeenRunIds[$Queued.RunId] = Get-Date
             $Labels = ($Queued.Labels -join ',')
-            $RunnerName = "$ComposeProject"
+            $RunnerName = $Project
 
             if (-not $RegTokenForRepo) {
                 try {
-                    $RegTokenForRepo = New-RegistrationToken -PatToken $PatToken -RepoFullName $Repo.full_name
+                    $RegTokenForRepo = New-RegistrationToken -Token $Token -RepoFullName $Repo.full_name
                 } catch {
                     Write-Warning "Failed to create registration token for $($Repo.full_name): $($_.Exception.Message)"
                     continue
                 }
             }
 
-            Start-Runner -Repo $Repo -RegToken $RegTokenForRepo -ComposeProject $ComposeProject -Platform $Platform.Name -RunnerIdleTimeoutMinutes $RunnerIdleTimeoutMinutes -RunnerMaxRestarts $RunnerMaxRestarts -RunnerLabels $Labels -RunnerName $RunnerName -WithWsl:$($Platform.WithWsl)
-            $LaunchRegistry[$ComposeProject] = [pscustomobject]@{
+            try {
+                Start-KubeRunner -Repo $Repo -RegToken $RegTokenForRepo -Project $Project -Platform $Platform.Name -TemplatePath $Platform.Template -Namespace $Namespace -RunnerIdleTimeoutMinutes $RunnerIdleTimeoutMinutes -RunnerMaxRestarts $RunnerMaxRestarts -RunnerLabels $Labels -RunnerName $RunnerName
+            } catch {
+                Write-Warning "Failed to launch $($Platform.Name) runner for $($Repo.full_name): $($_.Exception.Message)"
+                continue
+            }
+            $LaunchRegistry[$Project] = [pscustomobject]@{
                 RepoFullName = $Repo.full_name
                 RunnerName   = $RunnerName
                 Platform     = $Platform.Name
@@ -467,11 +310,11 @@ while ($true) {
     }
 
     try {
-        Remove-StaleRunners -Headers $Headers -LaunchRegistry ([ref]$LaunchRegistry) -IdleTimeoutMinutes $RunnerIdleTimeoutMinutes -CleanupGraceMinutes $RunnerCleanupGraceMinutes
+        Remove-StaleRunners -Headers $Headers -LaunchRegistry ([ref]$LaunchRegistry) -Namespace $Namespace -IdleTimeoutMinutes $RunnerIdleTimeoutMinutes -CleanupGraceMinutes $RunnerCleanupGraceMinutes
     } catch {
         Write-Warning "Failed stale-runner cleanup: $($_.Exception.Message)"
     }
-    $PatToken = $null
+    $Token = $null
     $Headers = $null
     Start-Sleep -Seconds $PollSeconds
 }

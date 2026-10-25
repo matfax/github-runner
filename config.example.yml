@@ -1,4 +1,4 @@
-owner: ""            # optional GitHub owner filter (login)
+owner: ""            # optional GitHub owner filter (login); also picks the App installation when there are several
 includeRepos: []     # optional explicit repos, e.g. ["user/repo1", "org/repo2"]
 excludeRepos: []     # optional exclusions
 pollSeconds: 30
@@ -10,6 +10,9 @@ requiredLabels:
   - orchestrated
 windowsLabelRegex: (?i)windows
 linuxLabelRegex: (?i)linux
-connectUrl: "http://localhost:8181"  # 1Password Connect API base URL (host port)
-connectToken: ""                     # Connect access token (keep secret)
-connectSecretRef: "op://<vault>/<item>/<field>"  # 1Password secret reference (vault/item/field)
+namespace: ""        # namespace for runner Jobs; defaults to RUNNER_NAMESPACE or the pod's own namespace
+runnerTemplates:     # Job manifests per platform; omit a platform to disable it
+  linux: ./runner-linux.yaml
+  windows: ./runner-windows.yaml
+# GitHub App credentials come from the environment, not this file:
+#   GITHUB_APP_ID, GITHUB_APP_PRIVATE_KEY_PATH, GITHUB_APP_INSTALLATION_ID (optional)

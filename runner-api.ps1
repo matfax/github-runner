@@ -15,10 +15,13 @@ function Get-RunnerApiBaseUri {
 }
 
 function New-GitHubHeaders {
-    param ([string]$PatToken)
+    param (
+        [Alias("PatToken")]
+        [string]$Token
+    )
 
     return @{
-        "Authorization"        = "Bearer $PatToken"
+        "Authorization"        = "Bearer $Token"
         "Accept"               = "application/vnd.github+json"
         "X-GitHub-Api-Version" = "2022-11-28"
         "User-Agent"           = "gh-runner-auto-launch"

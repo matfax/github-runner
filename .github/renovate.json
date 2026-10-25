@@ -46,7 +46,7 @@
         "ARG \\w+?_GITHUB_VERSION=(?<currentValue>[^\\s#]+)\\s+#\\s*repository:\\s*(?<depName>[\\w./-]+)"
       ],
       "datasourceTemplate": "github-releases",
-      "extractVersionTemplate": "^v?(\\?<version>.+)$"
+      "extractVersionTemplate": "^v?(?<version>.+)$"
     },
     {
       "customType": "regex",
@@ -63,9 +63,21 @@
     },
     {
       "customType": "regex",
+      "description": "Update the Helm version installed by azure/setup-helm",
+      "managerFilePatterns": [
+        ".github/workflows/*.yml"
+      ],
+      "matchStrings": [
+        "uses: azure/setup-helm@\\S+(?: # \\S+)?\\s+with:\\s+version:\\s*(?<currentValue>v[^\\s#]+)"
+      ],
+      "datasourceTemplate": "github-releases",
+      "depNameTemplate": "helm/helm"
+    },
+    {
+      "customType": "regex",
       "description": "Update docker-engine appVersion in Helm Chart.yaml from GitHub releases",
       "managerFilePatterns": [
-        "docker-dind/chart/Chart.yaml"
+        "charts/docker-dind/Chart.yaml"
       ],
       "matchStrings": [
         "appVersion:\\s*\"(?<currentValue>[^\"]+)\""
@@ -79,6 +91,11 @@
     {
       "matchDepNames": ["moby/moby"],
       "groupName": "docker-engine version"
+    },
+    {
+      "description": "chart-testing expects Helm 3",
+      "matchDepNames": ["helm/helm"],
+      "allowedVersions": "<4.0.0"
     },
     {
       "matchPackageNames": ["ghcr.io/matfax/github-runner/docker-dind"],

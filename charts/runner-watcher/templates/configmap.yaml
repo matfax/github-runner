@@ -1,0 +1,40 @@
+{{- $templates := dict -}}
+{{- if .Values.runners.linux.enabled }}
+{{- $_ := set $templates "linux" "/etc/github-runner/runner-linux.yaml" }}
+{{- end }}
+{{- if .Values.runners.windows.enabled }}
+{{- $_ := set $templates "windows" "/etc/github-runner/runner-windows.yaml" }}
+{{- end }}
+{{- if not $templates }}
+{{- fail "Enable at least one of runners.linux.enabled or runners.windows.enabled" }}
+{{- end }}
+{{- $config := dict
+  "owner" .Values.watcher.owner
+  "includeRepos" .Values.watcher.includeRepos
+  "excludeRepos" .Values.watcher.excludeRepos
+  "pollSeconds" .Values.watcher.pollSeconds
+  "maxLaunchPerCycle" .Values.watcher.maxLaunchPerCycle
+  "requiredLabels" .Values.watcher.requiredLabels
+  "windowsLabelRegex" .Values.watcher.windowsLabelRegex
+  "linuxLabelRegex" .Values.watcher.linuxLabelRegex
+  "runnerIdleTimeoutMinutes" .Values.runners.idleTimeoutMinutes
+  "runnerMaxRestarts" .Values.runners.maxRestarts
+  "runnerTemplates" $templates
+-}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "runner-watcher.fullname" . }}
+  labels:
+    {{- include "runner-watcher.labels" . | nindent 4 }}
+data:
+  config.yml: |
+    {{- toYaml $config | nindent 4 }}
+  {{- if .Values.runners.linux.enabled }}
+  runner-linux.yaml: |
+    {{- include "runner-watcher.linuxJob" . | nindent 4 }}
+  {{- end }}
+  {{- if .Values.runners.windows.enabled }}
+  runner-windows.yaml: |
+    {{- include "runner-watcher.windowsJob" . | nindent 4 }}
+  {{- end }}

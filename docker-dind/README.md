@@ -1,6 +1,6 @@
 # Windows Docker-in-Docker Service
 
-Docker daemon that exposes a TCP endpoint for Docker API access using the host's containerd runtime. Designed for GitHub Actions runners on AKS Edge and Windows Kubernetes clusters.
+Docker daemon that exposes a TCP endpoint for Docker API access using the host's containerd runtime. Designed for GitHub Actions runners on RKE2 Windows workers, AKS Edge and other Windows Kubernetes clusters.
 
 ## Overview
 
@@ -9,14 +9,14 @@ This service provides Docker API access via TCP port 2375 by running a Docker da
 **Key features:**
 - Uses host containerd runtime via `\\.\pipe\containerd-containerd`
 - Exposes standard Docker TCP API on port 2375
-- Compatible with AKS Edge and Windows Kubernetes
+- Compatible with RKE2 (Windows agents), AKS Edge and Windows Kubernetes
 - Configurable builder garbage collection
 
 ## Installation
 
 ### Prerequisites
 
-- AKS Edge or Kubernetes cluster with Windows node pool
+- RKE2 with a Windows agent node (Calico CNI), AKS Edge, or another cluster with a Windows node pool
 - Windows hostProcess container support (Kubernetes 1.23+)
 - Helm 3.x
 
@@ -26,7 +26,7 @@ When running on Windows nodes with Calico CNI, the service defaults to a headles
 1. kube-proxy on Windows doesn't properly route ClusterIP traffic to hostNetwork pod endpoints
 2. DNS resolution with a headless service resolves directly to the node IP, bypassing kube-proxy
 
-The Docker daemon container includes a Windows firewall rule that restricts inbound traffic to port 2375 from the configured pod network CIDR (default: 10.244.0.0/16 for Calico). This provides network-level access control at the Windows host firewall.
+The Docker daemon container includes a Windows firewall rule that restricts inbound traffic to port 2375 from the configured pod network CIDR (default: 10.42.0.0/16, RKE2's default pod CIDR; use 10.244.0.0/16 on AKS Edge). This provides network-level access control at the Windows host firewall.
 
 ### Option 1: Install from Helm Repository
 
@@ -58,7 +58,7 @@ service:
 # Windows firewall configuration
 firewall:
   enabled: true
-  podCIDR: "10.244.0.0/16"  # Calico pod network CIDR
+  podCIDR: "10.42.0.0/16"  # RKE2 default pod CIDR (AKS Edge: 10.244.0.0/16)
   nodeCIDR: "192.168.0.0/16"  # Node network CIDR
 
 # Resource allocation
@@ -135,7 +135,7 @@ docker context use remote-windows
 ```yaml
 firewall:
   enabled: true
-  podCIDR: "10.244.0.0/16"  # Adjust to match your cluster's pod network
+  podCIDR: "10.42.0.0/16"  # Adjust to match your cluster's pod network
   nodeCIDR: "192.168.0.0/16"  # Adjust to match your cluster's node network
 ```
 
@@ -178,6 +178,10 @@ docker -H tcp://localhost:2375 version
 2. **hostProcess errors**: Verify Windows hostProcess containers are enabled on the node
 3. **Image pull errors**: Ensure Windows nodes can access container registry
 4. **Containerd pipe access**: Verify the containerd named pipe `\\\\.\\pipe\\containerd-containerd` exists on the host
+
+## Integration with the runner-watcher chart
+
+The `runner-watcher` chart's Windows runner Jobs schedule onto the node running this daemon (pod affinity on `app.kubernetes.io/name: docker-dind`) and connect to it via the node IP: `DOCKER_HOST=tcp://$(NODE_IP):2375`. Install both charts; no extra wiring is needed.
 
 ## Integration with GitHub ARC
 
