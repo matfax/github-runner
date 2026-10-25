@@ -35,6 +35,7 @@ param(
     [string]$Registry,
     
     [Parameter(Mandatory = $true)]
+    [AllowEmptyString()]
     [string]$ReleasePrefix,
     
     [Parameter(Mandatory = $true)]
