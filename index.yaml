@@ -3,6 +3,27 @@ entries:
   docker-dind:
   - apiVersion: v2
     appVersion: 28.3.1
+    created: "2026-10-27T05:04:56.742138814Z"
+    description: Windows Docker-in-Docker service with TCP endpoint
+    digest: 399dd9478aaf6379a9291d4088a5517baba07c7dcb2e077eff4676268f1250d3
+    home: https://github.com/matfax/github-runner
+    keywords:
+    - docker
+    - dind
+    - windows
+    - tcp
+    maintainers:
+    - email: mat@fax.fyi
+      name: matfax
+    name: docker-dind
+    sources:
+    - https://github.com/matfax/github-runner/tree/main/docker-dind
+    type: application
+    urls:
+    - https://github.com/matfax/github-runner/releases/download/docker-dind-0.4.2-dev.270/docker-dind-0.4.2-dev.270.tgz
+    version: 0.4.2-dev.270
+  - apiVersion: v2
+    appVersion: 28.3.1
     created: "2026-10-24T05:29:19.74936655Z"
     description: Windows Docker-in-Docker service with TCP endpoint
     digest: 37b8f73e7d62519881b168d4d067647a5920b869b2f836db9696a0b1d3f7f937
@@ -5692,4 +5713,28 @@ entries:
     urls:
     - https://github.com/matfax/github-runner/releases/download/docker-dind-0.4.1/docker-dind-0.4.1.tgz
     version: 0.4.1
-generated: "2026-10-24T05:29:19.750872954Z"
+  runner-watcher:
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-27T05:04:56.943575505Z"
+    description: Launches ephemeral GitHub Actions runner Jobs on demand for every
+      repo a GitHub App is installed on
+    digest: a5fb51193da2abea71ff28c8232df8e774225b79e255ccf2dc4b59b8e5567e3a
+    home: https://github.com/matfax/github-runner
+    keywords:
+    - github
+    - actions
+    - runner
+    - rke2
+    kubeVersion: '>=1.29.0-0'
+    maintainers:
+    - email: mat@fax.fyi
+      name: matfax
+    name: runner-watcher
+    sources:
+    - https://github.com/matfax/github-runner
+    type: application
+    urls:
+    - https://github.com/matfax/github-runner/releases/download/runner-watcher-0.1.0/runner-watcher-0.1.0.tgz
+    version: 0.1.0
+generated: "2026-10-27T05:04:56.94471544Z"
