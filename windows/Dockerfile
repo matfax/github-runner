@@ -17,7 +17,7 @@ SHELL ["powershell", "-Command", "$ErrorActionPreference = 'Stop'; $ProgressPref
 # Install Chocolatey
 ADD https://community.chocolatey.org/install.ps1 C:/install_choco.ps1
 
-ARG CHOCO_GITHUB_VERSION=2.6.0 # repository: chocolatey/choco
+ARG CHOCO_GITHUB_VERSION=2.7.5 # repository: chocolatey/choco
 ENV CHOCO_VERSION=${CHOCO_GITHUB_VERSION}
 
 RUN Set-ExecutionPolicy Bypass -Scope Process -Force; `
