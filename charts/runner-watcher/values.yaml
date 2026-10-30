@@ -117,7 +117,7 @@ cache:
   image:
     repository: ghcr.io/falcondev-oss/github-actions-cache-server
     pullPolicy: IfNotPresent
-    tag: "latest@sha256:41530ac4215fddcc0bdfd87b5069f40a226572b1325885f02e9173068cdc1872"
+    tag: "latest@sha256:05c4d9e7169f525f2b74d412c4a081aeec5446a017ec88bae668e63ebfb16aa9"
   cleanupOlderThanDays: 30
   service:
     port: 3000
