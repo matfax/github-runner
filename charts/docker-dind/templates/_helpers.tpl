@@ -58,3 +58,47 @@ Create the name of the service account to use
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
 {{- end }}
+
+{{/*
+Secret holding the server certificate (tls.crt, tls.key, ca.crt)
+*/}}
+{{- define "docker-dind.tlsSecretName" -}}
+{{- .Values.tls.existingSecret | default (printf "%s-tls" (include "docker-dind.fullname" .)) }}
+{{- end }}
+
+{{/*
+Secret holding the CA bundle client certificates must chain to
+*/}}
+{{- define "docker-dind.clientCASecretName" -}}
+{{- .Values.tls.clientCA.secretName | default (include "docker-dind.tlsSecretName" .) }}
+{{- end }}
+
+{{/*
+DNS names the server certificate covers, as a YAML list
+*/}}
+{{- define "docker-dind.dnsNames" -}}
+{{- $svc := include "docker-dind.fullname" . -}}
+{{- $ns := .Release.Namespace -}}
+- {{ printf "%s.%s.svc.%s" $svc $ns .Values.clusterDomain }}
+- {{ printf "%s.%s.svc" $svc $ns }}
+- {{ printf "%s.%s" $svc $ns }}
+- {{ $svc }}
+{{- range .Values.tls.certManager.extraDnsNames }}
+- {{ . }}
+{{- end }}
+{{- end }}
+
+{{/*
+Validates the TLS settings
+*/}}
+{{- define "docker-dind.validateTLS" -}}
+{{- if and .Values.tls.existingSecret .Values.tls.certManager.enabled }}
+{{- fail "tls.existingSecret and tls.certManager.enabled are mutually exclusive" }}
+{{- end }}
+{{- if and .Values.tls.certManager.enabled (not .Values.tls.certManager.issuerRef.name) }}
+{{- fail "tls.certManager.issuerRef.name is required when tls.certManager.enabled is true" }}
+{{- end }}
+{{- if not (has .Values.isolation (list "process" "hyperv")) }}
+{{- fail "isolation must be \"process\" or \"hyperv\"" }}
+{{- end }}
+{{- end }}

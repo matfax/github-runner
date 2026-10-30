@@ -1,0 +1,12 @@
+{
+  "listen": ":2376",
+  "tls": {
+    "cert": "dind-tls/server/tls.crt",
+    "key": "dind-tls/server/tls.key",
+    "clientCA": "dind-tls/client-ca/ca.crt"
+  },
+  "baseDaemonConfig": "docker-config/daemon.json",
+  "dataRoot": "C:/docker-data/tenants",
+  "execRoot": "C:/ProgramData/docker-dind/exec",
+  "isolation": "process"
+}

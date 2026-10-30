@@ -1,0 +1,30 @@
+{{- include "docker-dind.validateTLS" . }}
+{{- if .Values.tls.certManager.enabled }}
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ include "docker-dind.fullname" . }}
+  labels:
+    {{- include "docker-dind.labels" . | nindent 4 }}
+spec:
+  secretName: {{ include "docker-dind.tlsSecretName" . }}
+  duration: {{ .Values.tls.certManager.duration }}
+  renewBefore: {{ .Values.tls.certManager.renewBefore }}
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+    rotationPolicy: Always
+  usages:
+    - digital signature
+    - server auth
+  dnsNames:
+    {{- include "docker-dind.dnsNames" . | nindent 4 }}
+  {{- with .Values.tls.certManager.ipAddresses }}
+  ipAddresses:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  issuerRef:
+    name: {{ .Values.tls.certManager.issuerRef.name }}
+    kind: {{ .Values.tls.certManager.issuerRef.kind }}
+    group: {{ .Values.tls.certManager.issuerRef.group }}
+{{- end }}

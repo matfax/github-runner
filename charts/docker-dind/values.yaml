@@ -1,3 +1,4 @@
+# One replica per Windows build node; each replica keeps its own per-repository caches.
 replicaCount: 1
 
 image:
@@ -9,25 +10,77 @@ imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
 
+# Kubernetes cluster DNS domain, used in the server certificate's DNS names
+clusterDomain: cluster.local
+
 service:
   type: ClusterIP
-  clusterIP: "None"  # Headless service - DNS resolves directly to pod/node IP
-  port: 2375
-  targetPort: 2375
+  # Headless: DNS resolves straight to the node IP of the hostNetwork pod. Windows kube-proxy (RKE2 Calico,
+  # AKS Edge) does not route ClusterIP traffic to hostNetwork endpoints.
+  clusterIP: "None"
+  # Mutual-TLS Docker endpoint; also the port the gateway listens on, on every node IP
+  port: 2376
   annotations: {}
 
-# Docker daemon configuration
+# Server certificate and client CA for the mutual-TLS endpoint on port 2376.
+# Pick one source for the server certificate:
+#   1. tls.existingSecret: a kubernetes.io/tls Secret you manage (keys tls.crt, tls.key, ca.crt);
+#   2. tls.certManager.enabled: a cert-manager Certificate from your issuer;
+#   3. neither: the chart generates a CA (Secret <fullname>-ca) and a server certificate signed by it.
+# The certificate must cover <fullname>.<namespace>.svc.<clusterDomain> and <fullname>.<namespace>.svc.
+tls:
+  existingSecret: ""
+  certManager:
+    enabled: false
+    # Issuer or ClusterIssuer that signs the server certificate (required when enabled)
+    issuerRef:
+      name: ""
+      kind: Issuer
+      group: cert-manager.io
+    duration: 2160h
+    renewBefore: 360h
+    # Added to the service DNS names
+    extraDnsNames: []
+    ipAddresses: []
+  # Validity of the chart-generated CA and server certificate (option 3)
+  generatedValidityDays: 3650
+  # CA bundle that client certificates must chain to. Empty secretName: the ca.crt of the server Secret.
+  # Clients identify as "owner/repo" in their certificate's CN or URI SAN and need the clientAuth key usage.
+  clientCA:
+    secretName: ""
+    key: ca.crt
+  # How often the gateway re-reads the mounted certificates (renewals apply without a restart)
+  reloadInterval: 30s
+
+# Per-repository Docker daemons, started on first use and stopped when idle
+tenants:
+  # Only these owner/repo identities may connect (glob patterns, e.g. "matfax/*"); empty allows any identity
+  # whose certificate chains to tls.clientCA
+  allowed: []
+  # Stop a repository's daemon after this long without requests and running containers
+  idleTimeout: 15m
+  # Stop it after this long without requests even if containers still run (e.g. a forgotten "docker run -d")
+  containerIdleTimeout: 4h
+  startTimeout: 2m
+  # Daemons running at once; further repositories wait until one goes idle
+  maxRunning: 4
+
+# Default isolation of build containers: "process" or "hyperv". Process isolation shares the node's kernel
+# and is not a security boundary; "hyperv" needs Hyper-V on the node and also refuses explicit process isolation.
+isolation: process
+
+# Settings every per-repository Docker daemon inherits
 docker:
-  # TCP host binding
-  host: "tcp://0.0.0.0:2375"
   # Insecure registries (private registry access)
   insecureRegistries:
     - "10.0.0.0/8"
     - "172.16.0.0/12"
     - "192.168.0.0/16"
-  # Explicit data directory for Docker (images, layers, containers)
-  # Must match persistence.mountPath for cache to persist
+  # Host directory holding each repository's data-root (images, layers, build cache) under <dataRoot>/tenants
+  # Must match persistence.mountPath for the cache to persist
   dataRoot: "C:/docker-data"
+  # Host directory holding each repository's exec-root
+  execRoot: "C:/ProgramData/docker-dind/exec"
   # Builder configuration
   builder:
     gc:
@@ -35,14 +88,36 @@ docker:
       defaultKeepStorage: "16GB"
       # Enable garbage collection
       enabled: true
-  # Docker network configuration
-  network:
-    # Set to "none" to disable default network creation (recommended for HostProcess containers)
-    # This prevents overlay VNI conflicts with the cluster CNI (RKE2 Calico, AKS Edge)
-    # Set to "nat" if you need Docker's default NAT networking
-    bridge: "none"
-  # Additional daemon options
+  # Extra daemon.json settings, e.g. {"registry-mirrors": ["https://mirror.example"]}. Settings that must
+  # differ per repository (hosts, data-root, exec-root, containerd namespace, bridge, TLS) are always overridden.
+  extraConfig: {}
+  # Deprecated: "key: value" strings merged into daemon.json; use extraConfig
   extraArgs: []
+
+# Networking of build containers (RUN steps and docker run). Each repository gets its own NAT network.
+network:
+  # Split into one subnet per repository; must not overlap any network the node can reach
+  pool: 172.30.0.0/16
+  prefixLength: 24
+  # DNS servers handed to build containers (the NAT gateway's DNS proxy is disabled). Always reachable.
+  dns:
+    - 1.1.1.1
+    - 8.8.8.8
+  # Cluster service CIDR (RKE2 default), blocked for build containers
+  serviceCIDR: 10.43.0.0/16
+  egress:
+    # IPv4 ranges build containers may not reach. firewall.podCIDR, network.serviceCIDR, the tenant pool and
+    # the node's own addresses are added. Enforced by Windows Firewall, for process isolation only.
+    block:
+      - 0.0.0.0/8
+      - 10.0.0.0/8
+      - 100.64.0.0/10
+      - 169.254.0.0/16
+      - 172.16.0.0/12
+      - 192.168.0.0/16
+      - 224.0.0.0/3
+    # Exceptions to the block list, e.g. an internal package proxy
+    allow: []
 
 # Resource requests and limits
 resources:
@@ -68,21 +143,20 @@ tolerations:
 # Affinity for scheduling
 affinity: {}
 
-# Liveness probe - using Docker API health check
+# TCP checks of the gateway port (connections without a TLS hello are not logged)
 livenessProbe:
   tcpSocket:
-    port: 2375
-  initialDelaySeconds: 60
+    port: docker-tls
+  initialDelaySeconds: 30
   periodSeconds: 30
   timeoutSeconds: 10
   successThreshold: 1
   failureThreshold: 3
 
-# Readiness probe
 readinessProbe:
   tcpSocket:
-    port: 2375
-  initialDelaySeconds: 30
+    port: docker-tls
+  initialDelaySeconds: 10
   periodSeconds: 10
   timeoutSeconds: 5
   successThreshold: 1
@@ -107,18 +181,17 @@ persistence:
   storageClass: ""
   accessMode: ReadWriteOnce
   size: 64Gi
-  # Must match docker.dataRoot below
+  # Must match docker.dataRoot
   mountPath: C:/docker-data
 
-# Windows firewall configuration
+# Windows firewall configuration (rules are created on the node at every start)
 firewall:
   enabled: true
-  # Pod network CIDR to allow access from
-  # Default is 10.42.0.0/16, RKE2's default cluster-cidr - verify this matches your cluster's pod network
-  # Other common ranges: 10.244.0.0/16 (AKS Edge / Calico), 10.32.0.0/12 (kube-router), 10.200.0.0/16 (kubenet)
-  # If empty, allows access from any address
+  # Refuse to start if a Windows Firewall profile is disabled, since the rules would have no effect
+  required: true
+  # Pod network allowed to reach port 2376 (RKE2 default cluster-cidr; AKS Edge: 10.244.0.0/16).
+  # Also blocked for build containers.
   podCIDR: "10.42.0.0/16"
-  # Node network CIDR to allow access from
-  # Default is 192.168.0.0/16 for most node networks
-  # If empty, allows access from any address
-  nodeCIDR: "192.168.0.0/16"
+  # Additional networks allowed to reach port 2376, e.g. a node or LAN range, comma-separated.
+  # If both CIDRs are empty, any address may connect (mutual TLS still applies).
+  nodeCIDR: ""

@@ -15,8 +15,8 @@ spec:
   {{- end }}
   ports:
     - port: {{ .Values.service.port }}
-      targetPort: {{ .Values.service.targetPort }}
+      targetPort: docker-tls
       protocol: TCP
-      name: docker
+      name: docker-tls
   selector:
     {{- include "docker-dind.selectorLabels" . | nindent 4 }}

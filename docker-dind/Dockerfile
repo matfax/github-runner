@@ -1,5 +1,28 @@
 # escape=`
 
+# Build the mutual-TLS gateway on the same base image, so the build pulls no extra base layers
+FROM mcr.microsoft.com/powershell:lts-windowsservercore-ltsc2022@sha256:4d58db7a0242824875f60449f8ebe482e14c15470b2a9a7ca1bce0172770240c AS gateway
+
+SHELL ["pwsh", "-Command", "$ErrorActionPreference = 'Stop'; $ProgressPreference = 'SilentlyContinue';"]
+
+ARG GO_VERSION=1.27.3
+ADD https://go.dev/dl/go${GO_VERSION}.windows-amd64.zip C:/go.zip
+RUN Expand-Archive -Path C:/go.zip -DestinationPath C:/ -Force; `
+    Remove-Item C:/go.zip -Force
+
+ENV GOTOOLCHAIN=local GOFLAGS=-mod=readonly CGO_ENABLED=0
+WORKDIR C:/src
+COPY gateway/go.mod gateway/go.sum ./
+RUN $env:PATH = 'C:\go\bin;' + $env:PATH; `
+    go mod download; if ($LASTEXITCODE) { exit $LASTEXITCODE }
+COPY gateway/ ./
+ARG GATEWAY_VERSION=dev
+RUN $env:PATH = 'C:\go\bin;' + $env:PATH; `
+    go vet ./...; if ($LASTEXITCODE) { exit $LASTEXITCODE }; `
+    go test ./...; if ($LASTEXITCODE) { exit $LASTEXITCODE }; `
+    $ldflags = '-s -w -X main.version=' + $env:GATEWAY_VERSION; `
+    go build -trimpath -ldflags $ldflags -o C:/out/gateway.exe .; if ($LASTEXITCODE) { exit $LASTEXITCODE }
+
 # Use Windows Server Core as base
 FROM mcr.microsoft.com/powershell:lts-windowsservercore-ltsc2022@sha256:4d58db7a0242824875f60449f8ebe482e14c15470b2a9a7ca1bce0172770240c
 
@@ -8,7 +31,7 @@ LABEL org.opencontainers.image.source="https://github.com/matfax/github-runner"
 LABEL org.opencontainers.image.vendor="matfax"
 LABEL org.opencontainers.image.licenses="Apache-2.0"
 LABEL org.opencontainers.image.title="Windows Docker-in-Docker Service"
-LABEL org.opencontainers.image.description="Docker-in-Docker for Windows with TCP endpoint"
+LABEL org.opencontainers.image.description="Per-repository Docker daemons for Windows image builds behind a mutual-TLS gateway"
 LABEL org.opencontainers.image.base.name="mcr.microsoft.com/windows/servercore:ltsc2022"
 
 SHELL ["pwsh", "-Command", "$ErrorActionPreference = 'Stop'; $ProgressPreference = 'SilentlyContinue';"]
@@ -61,16 +84,20 @@ RUN Write-Host "Installing CNI plugins v${CNI_GITHUB_VERSION}..."; `
     Expand-Archive -Path C:\cni-plugins.zip -DestinationPath $cniBinDir; `
     Remove-Item C:\cni-plugins.zip -Force
 
-# Copy startup script
+# CNI plugins and BuildKit are only used by buildkitd, which this image ships but does not start; the
+# per-repository dockerd instances use their own HNS NAT networks, not CNI.
+
+# Gateway, startup script and defaults for running outside Kubernetes
+COPY --from=gateway C:/out/gateway.exe C:/dind/gateway.exe
+COPY gateway.json C:/dind/gateway.json
 COPY start.ps1 C:/start.ps1
 
-# Copy default daemon config for non-K8s environments
+# Base config every per-repository dockerd inherits
 COPY daemon.json C:/docker-config/daemon.json
 
-# Expose Docker TCP port
-EXPOSE 2375
+# Mutual-TLS Docker endpoint (the only listener)
+EXPOSE 2376
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 CMD docker info
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 CMD ["pwsh", "-NoProfile", "-Command", "$c = [Net.Sockets.TcpClient]::new(); $c.Connect('127.0.0.1', 2376); $c.Close()"]
 
-CMD ["dockerd", "--config-file=C:\\docker-config\\daemon.json"]
+CMD ["pwsh", "-NoProfile", "-File", "C:\\start.ps1"]
