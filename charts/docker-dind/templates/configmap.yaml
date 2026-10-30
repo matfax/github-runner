@@ -5,23 +5,40 @@ metadata:
   labels:
     {{- include "docker-dind.labels" . | nindent 4 }}
 data:
+  # Base settings of every per-repository dockerd; the gateway adds the per-repository ones
   daemon.json: |-
-    {{- $data := dict "hosts" (list .Values.docker.host) "insecure-registries" .Values.docker.insecureRegistries }}
-    {{- /* Add containerd pipe for Windows */}}
-    {{- $_ := set $data "containerd" "\\\\.\\pipe\\containerd-containerd" }}
-    {{- /* Explicitly set data-root to ensure persistence works */}}
-    {{- $_ := set $data "data-root" .Values.docker.dataRoot }}
-    {{- /* Network configuration to avoid overlay/VNI conflicts */}}
-    {{- if and .Values.docker.network .Values.docker.network.bridge }}
-    {{- $_ := set $data "bridge" .Values.docker.network.bridge }}
-    {{- end }}
+    {{- $data := dict "insecure-registries" .Values.docker.insecureRegistries }}
     {{- if and .Values.docker.builder .Values.docker.builder.gc }}
     {{- $_ := set $data "builder" (dict "gc" (dict "defaultKeepStorage" .Values.docker.builder.gc.defaultKeepStorage "enabled" .Values.docker.builder.gc.enabled)) }}
     {{- end }}
-    {{- if .Values.docker.extraArgs }}
     {{- range .Values.docker.extraArgs }}
     {{- $parts := splitn ":" 2 . }}
-    {{- $_ := set $data (index $parts 0 | trim) (index $parts 1 | trim) }}
+    {{- $_ := set $data ($parts._0 | trim) ($parts._1 | trim) }}
     {{- end }}
-    {{- end }}
+    {{- $data = mergeOverwrite $data (deepCopy .Values.docker.extraConfig) }}
     {{- mustToJson $data | nindent 4 }}
+  gateway.json: |-
+    {{- $block := concat .Values.network.egress.block (compact (list .Values.firewall.podCIDR .Values.network.serviceCIDR)) }}
+    {{- $gw := dict
+      "listen" (printf ":%d" (int .Values.service.port))
+      "tls" (dict
+        "cert" "dind-tls/server/tls.crt"
+        "key" "dind-tls/server/tls.key"
+        "clientCA" "dind-tls/client-ca/ca.crt"
+        "reloadInterval" .Values.tls.reloadInterval)
+      "baseDaemonConfig" "docker-config-k8s/daemon.json"
+      "dataRoot" (printf "%s/tenants" (trimSuffix "/" .Values.docker.dataRoot))
+      "execRoot" .Values.docker.execRoot
+      "isolation" .Values.isolation
+      "tenants" (dict
+        "allowed" .Values.tenants.allowed
+        "idleTimeout" .Values.tenants.idleTimeout
+        "containerIdleTimeout" .Values.tenants.containerIdleTimeout
+        "startTimeout" .Values.tenants.startTimeout
+        "maxRunning" (int .Values.tenants.maxRunning))
+      "network" (dict
+        "pool" .Values.network.pool
+        "prefixLength" (int .Values.network.prefixLength)
+        "dns" .Values.network.dns
+        "egress" (dict "block" $block "allow" .Values.network.egress.allow)) }}
+    {{- mustToJson $gw | nindent 4 }}

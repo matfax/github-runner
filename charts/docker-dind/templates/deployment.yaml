@@ -1,3 +1,4 @@
+{{- include "docker-dind.validateTLS" . }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -29,6 +30,7 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       serviceAccountName: {{ include "docker-dind.serviceAccountName" . }}
+      automountServiceAccountToken: false
       securityContext:
         windowsOptions:
           hostProcess: true
@@ -44,25 +46,23 @@ spec:
       {{- end }}
       containers:
         - name: {{ .Chart.Name }}
-          securityContext:
-            {{- toYaml .Values.securityContext | nindent 12 }}
           image: "{{ .Values.image.repository }}{{ if (hasPrefix "@" .Values.image.tag) }}{{ .Values.image.tag }}{{ else }}:{{ .Values.image.tag | default (regexReplaceAllLiteral "^v" .Chart.AppVersion "") }}{{ end }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           command: ["powershell"]
-          args: ["-Command", "& (Join-Path $env:CONTAINER_SANDBOX_MOUNT_POINT 'start.ps1')"]
+          args: ["-NoProfile", "-Command", "& (Join-Path $env:CONTAINER_SANDBOX_MOUNT_POINT 'start.ps1')"]
           ports:
-            - name: docker
-              containerPort: {{ .Values.service.targetPort }}
+            - name: docker-tls
+              containerPort: {{ .Values.service.port }}
               protocol: TCP
           env:
-            - name: DOCKER_HOST
-              value: {{ .Values.docker.host }}
-            {{- if .Values.firewall.enabled }}
+            - name: FIREWALL_ENABLED
+              value: {{ .Values.firewall.enabled | quote }}
+            - name: FIREWALL_REQUIRED
+              value: {{ .Values.firewall.required | quote }}
             - name: FIREWALL_POD_CIDR
               value: {{ .Values.firewall.podCIDR | quote }}
             - name: FIREWALL_NODE_CIDR
               value: {{ .Values.firewall.nodeCIDR | quote }}
-            {{- end }}
           livenessProbe:
             {{- toYaml .Values.livenessProbe | nindent 12 }}
           readinessProbe:
@@ -72,6 +72,12 @@ spec:
           volumeMounts:
             - name: docker-config
               mountPath: C:/docker-config-k8s
+            - name: tls-server
+              mountPath: C:/dind-tls/server
+              readOnly: true
+            - name: tls-client-ca
+              mountPath: C:/dind-tls/client-ca
+              readOnly: true
             {{- if .Values.persistence.enabled }}
             - name: docker-data
               mountPath: {{ .Values.persistence.mountPath }}
@@ -80,13 +86,23 @@ spec:
         - name: docker-config
           configMap:
             name: {{ include "docker-dind.fullname" . }}
+        # Mounted without subPath so renewed certificates reach the running gateway
+        - name: tls-server
+          secret:
+            secretName: {{ include "docker-dind.tlsSecretName" . }}
+            items:
+              - key: tls.crt
+                path: tls.crt
+              - key: tls.key
+                path: tls.key
+        - name: tls-client-ca
+          secret:
+            secretName: {{ include "docker-dind.clientCASecretName" . }}
+            items:
+              - key: {{ .Values.tls.clientCA.key }}
+                path: ca.crt
         {{- if .Values.persistence.enabled }}
         - name: docker-data
-          {{- if .Values.persistence.existingClaim }}
           persistentVolumeClaim:
-            claimName: {{ .Values.persistence.existingClaim }}
-          {{- else }}
-          persistentVolumeClaim:
-            claimName: {{ include "docker-dind.fullname" . }}
-          {{- end }}
+            claimName: {{ .Values.persistence.existingClaim | default (include "docker-dind.fullname" .) }}
         {{- end }}

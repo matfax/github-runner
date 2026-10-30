@@ -1,43 +1,32 @@
-{{- $serviceFullName := include "docker-dind.fullname" . -}}
-{{- $servicePort := .Values.service.port -}}
+{{- $svc := include "docker-dind.fullname" . -}}
+{{- $fqdn := printf "%s.%s.svc.%s" $svc .Release.Namespace .Values.clusterDomain -}}
+Windows Docker build service installed.
 
-Windows Docker-in-Docker service installed!
+Endpoint (mutual TLS only):
+  DOCKER_HOST=tcp://{{ $fqdn }}:{{ .Values.service.port }}
+  DOCKER_TLS_VERIFY=1
+  DOCKER_CERT_PATH=<directory with ca.pem, cert.pem, key.pem>
 
-To use this Docker daemon from your applications:
+Server trust:  ca.crt of Secret {{ include "docker-dind.tlsSecretName" . }}
+Client CA:     {{ .Values.tls.clientCA.key }} of Secret {{ include "docker-dind.clientCASecretName" . }}
+Client identity: certificate CN or URI SAN "owner/repo" (extended key usage clientAuth). Each repository gets
+its own Docker daemon, cache and build network.
+{{- if .Values.tenants.allowed }}
+Allowed repositories: {{ join ", " .Values.tenants.allowed }}
+{{- end }}
+{{- if and (not .Values.tls.existingSecret) (not .Values.tls.certManager.enabled) }}
 
-1. Set the DOCKER_HOST environment variable:
+The server certificate is signed by a CA the chart generated (Secret {{ $svc }}-ca, kept on uninstall).
+{{- if not .Values.tls.clientCA.secretName }}
+Client certificates must be signed by that CA too, e.g. for testing:
 
-   PowerShell:
-   $env:DOCKER_HOST = "tcp://{{ $serviceFullName }}:{{ $servicePort }}"
-
-   Or in a Kubernetes pod spec:
-   env:
-     - name: DOCKER_HOST
-       value: "tcp://{{ $serviceFullName }}.{{ .Release.Namespace }}.svc.cluster.local:{{ $servicePort }}"
-
-2. Test the connection:
-
-   docker version
-
-3. Use Docker normally:
-
-   docker run --rm hello-world
-   docker build -t myapp:tag .
-
-Service Details:
-- Service: {{ $serviceFullName }}
-- Namespace: {{ .Release.Namespace }}
-- Type: {{ .Values.service.type }}
-- ClusterIP: {{ .Values.service.clusterIP }}{{- if eq .Values.service.clusterIP "None" }} (Headless - resolves to node IP){{- end }}
-- Port: {{ $servicePort }}
-- FQDN: {{ $serviceFullName }}.{{ .Release.Namespace }}.svc.cluster.local
-
-{{- if eq .Values.service.type "ClusterIP" }}
-Note: Service is ClusterIP. Ensure your Docker client is running within the cluster or has network access.
+  kubectl -n {{ .Release.Namespace }} get secret {{ $svc }}-ca -o jsonpath='{.data.tls\.crt}' | base64 -d > ca.pem
+  kubectl -n {{ .Release.Namespace }} get secret {{ $svc }}-ca -o jsonpath='{.data.tls\.key}' | base64 -d > ca-key.pem
+  openssl req -new -newkey ec -pkeyopt ec_paramgen_curve:P-256 -nodes -subj "/CN=owner\/repo" -keyout key.pem -out client.csr
+  openssl x509 -req -in client.csr -CA ca.pem -CAkey ca-key.pem -days 30 -out cert.pem \
+    -extfile <(printf "extendedKeyUsage=clientAuth")
+{{- end }}
 {{- end }}
 
-{{- if .Values.persistence.enabled }}
-Docker data will be persisted at: {{ .Values.persistence.mountPath }}
-{{- else }}
-Docker data is ephemeral and will be lost on pod restart.
-{{- end }}
+Isolation: {{ .Values.isolation }}{{ if eq .Values.isolation "process" }} (shares the node kernel; not a security boundary between repositories){{ end }}
+Port {{ .Values.service.port }} is open in the Windows Firewall for: {{ (compact (list .Values.firewall.podCIDR .Values.firewall.nodeCIDR) | join ", ") | default "any address" }}

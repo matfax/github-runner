@@ -1,0 +1,54 @@
+{{- /*
+Without an existing Secret or cert-manager, generate a CA and a server certificate signed by it. Both are
+kept across upgrades (lookup), so clients' trust and client certificates issued from the CA stay valid.
+*/}}
+{{- if and (not .Values.tls.existingSecret) (not .Values.tls.certManager.enabled) }}
+{{- $fullname := include "docker-dind.fullname" . }}
+{{- $caName := printf "%s-ca" $fullname }}
+{{- $tlsName := include "docker-dind.tlsSecretName" . }}
+{{- $days := int .Values.tls.generatedValidityDays }}
+{{- $caSecret := lookup "v1" "Secret" .Release.Namespace $caName }}
+{{- $tlsSecret := lookup "v1" "Secret" .Release.Namespace $tlsName }}
+{{- $ca := dict }}
+{{- if and $caSecret $caSecret.data }}
+{{- $ca = buildCustomCert (index $caSecret.data "tls.crt") (index $caSecret.data "tls.key") }}
+{{- else }}
+{{- $ca = genCA (printf "%s CA" $fullname) $days }}
+{{- end }}
+{{- $crt := "" }}
+{{- $key := "" }}
+{{- if and $caSecret $tlsSecret $tlsSecret.data }}
+{{- $crt = index $tlsSecret.data "tls.crt" | b64dec }}
+{{- $key = index $tlsSecret.data "tls.key" | b64dec }}
+{{- else }}
+{{- $server := genSignedCert (printf "%s.%s.svc" $fullname .Release.Namespace) nil (include "docker-dind.dnsNames" . | fromYamlArray) $days $ca }}
+{{- $crt = $server.Cert }}
+{{- $key = $server.Key }}
+{{- end }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ $caName }}
+  labels:
+    {{- include "docker-dind.labels" . | nindent 4 }}
+  annotations:
+    # Client certificates are signed by this CA; deleting it with the release would invalidate them
+    helm.sh/resource-policy: keep
+type: kubernetes.io/tls
+data:
+  tls.crt: {{ $ca.Cert | b64enc }}
+  tls.key: {{ $ca.Key | b64enc }}
+  ca.crt: {{ $ca.Cert | b64enc }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ $tlsName }}
+  labels:
+    {{- include "docker-dind.labels" . | nindent 4 }}
+type: kubernetes.io/tls
+data:
+  tls.crt: {{ $crt | b64enc }}
+  tls.key: {{ $key | b64enc }}
+  ca.crt: {{ $ca.Cert | b64enc }}
+{{- end }}

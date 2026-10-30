@@ -41,7 +41,7 @@ Why not ARC? GitHub only offers runners at repo, org or enterprise level. On a p
    helm repo add github-runner https://runner.actions.fyi
    helm install docker-dind github-runner/docker-dind -n github-runners
    ```
-   Its firewall defaults to RKE2's pod CIDR `10.42.0.0/16`; set `firewall.podCIDR`/`firewall.nodeCIDR` if yours differ. See [docker-dind/README.md](docker-dind/README.md).
+   It serves mutual TLS on port 2376 with a Docker daemon per repository (client certificate CN `owner/repo`); configure `tls.*` for your certificates. Its firewall admits RKE2's pod CIDR `10.42.0.0/16`; set `firewall.podCIDR` if yours differs. See [docker-dind/README.md](docker-dind/README.md).
 
 4) Install the watcher:
    ```bash
