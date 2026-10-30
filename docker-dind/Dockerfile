@@ -20,7 +20,8 @@ ARG GATEWAY_VERSION=dev
 RUN $env:PATH = 'C:\go\bin;' + $env:PATH; `
     go vet ./...; if ($LASTEXITCODE) { exit $LASTEXITCODE }; `
     go test ./...; if ($LASTEXITCODE) { exit $LASTEXITCODE }; `
-    go build -trimpath -ldflags "-s -w -X main.version=$env:GATEWAY_VERSION" -o C:/out/gateway.exe .; if ($LASTEXITCODE) { exit $LASTEXITCODE }
+    $ldflags = '-s -w -X main.version=' + $env:GATEWAY_VERSION; `
+    go build -trimpath -ldflags $ldflags -o C:/out/gateway.exe .; if ($LASTEXITCODE) { exit $LASTEXITCODE }
 
 # Use Windows Server Core as base
 FROM mcr.microsoft.com/powershell:lts-windowsservercore-ltsc2022@sha256:4d58db7a0242824875f60449f8ebe482e14c15470b2a9a7ca1bce0172770240c
@@ -97,6 +98,6 @@ COPY daemon.json C:/docker-config/daemon.json
 # Mutual-TLS Docker endpoint (the only listener)
 EXPOSE 2376
 
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 CMD pwsh -NoProfile -Command "$c = [Net.Sockets.TcpClient]::new(); $c.Connect('127.0.0.1', 2376); $c.Close()"
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 CMD ["pwsh", "-NoProfile", "-Command", "$c = [Net.Sockets.TcpClient]::new(); $c.Connect('127.0.0.1', 2376); $c.Close()"]
 
 CMD ["pwsh", "-NoProfile", "-File", "C:\\start.ps1"]
