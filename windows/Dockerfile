@@ -54,7 +54,7 @@ RUN choco install openjdk17 -y --version 17.0.2.20220913
 # Set working directory
 WORKDIR C:/actions-runner
 
-ARG RUNNER_GITHUB_VERSION=2.329.0 # repository: falcondev-oss/github-actions-runner
+ARG RUNNER_GITHUB_VERSION=2.338.1 # repository: falcondev-oss/github-actions-runner
 
 ADD https://github.com/falcondev-oss/github-actions-runner/releases/download/v${RUNNER_GITHUB_VERSION}/actions-runner-win-x64-${RUNNER_GITHUB_VERSION}.zip C:/actions-runner/runner.zip
 
