@@ -46,8 +46,9 @@ func TestTenantID(t *testing.T) {
 		}
 		seen[id] = name
 	}
-	if tenantID("matfax/github-runner") != tenantID("matfax/github-runner") {
-		t.Error("tenantID is not deterministic")
+	// IDs name existing data on nodes, so they must stay stable across versions.
+	if got, want := tenantID("matfax/github-runner"), "matfax-githu-caa474164f4cc1bcca25f459"; got != want {
+		t.Errorf("tenantID changed: got %q, want %q", got, want)
 	}
 }
 
