@@ -2,7 +2,7 @@ apiVersion: v2
 name: docker-dind
 description: Per-repository Windows Docker daemons behind a mutual-TLS endpoint
 type: application
-version: 0.0.0-dev
+version: 0.4.2-dev.273
 appVersion: "28.3.1"
 keywords:
   - docker

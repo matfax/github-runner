@@ -1,18 +1,14 @@
 # One replica per Windows build node; each replica keeps its own per-repository caches.
 replicaCount: 1
-
 image:
   repository: ghcr.io/matfax/github-runner/docker-dind
   pullPolicy: IfNotPresent
-  tag: ""
-
+  tag: "@sha256:e6b36531e0fe3607b4d26f698fd2b9f3ff64110813c1e463846645ea3eba471d"
 imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
-
 # Kubernetes cluster DNS domain, used in the server certificate's DNS names
 clusterDomain: cluster.local
-
 service:
   type: ClusterIP
   # Headless: DNS resolves straight to the node IP of the hostNetwork pod. Windows kube-proxy (RKE2 Calico,
@@ -21,7 +17,6 @@ service:
   # Mutual-TLS Docker endpoint; also the port the gateway listens on, on every node IP
   port: 2376
   annotations: {}
-
 # Server certificate and client CA for the mutual-TLS endpoint on port 2376.
 # Pick one source for the server certificate:
 #   1. tls.existingSecret: a kubernetes.io/tls Secret you manage (keys tls.crt, tls.key, ca.crt);
@@ -51,7 +46,6 @@ tls:
     key: ca.crt
   # How often the gateway re-reads the mounted certificates (renewals apply without a restart)
   reloadInterval: 30s
-
 # Per-repository Docker daemons, started on first use and stopped when idle
 tenants:
   # Only these owner/repo identities may connect (glob patterns, e.g. "matfax/*"); empty allows any identity
@@ -64,11 +58,9 @@ tenants:
   startTimeout: 2m
   # Daemons running at once; further repositories wait until one goes idle
   maxRunning: 4
-
 # Default isolation of build containers: "process" or "hyperv". Process isolation shares the node's kernel
 # and is not a security boundary; "hyperv" needs Hyper-V on the node and also refuses explicit process isolation.
 isolation: process
-
 # Settings every per-repository Docker daemon inherits
 docker:
   # Insecure registries (private registry access)
@@ -93,7 +85,6 @@ docker:
   extraConfig: {}
   # Deprecated: "key: value" strings merged into daemon.json; use extraConfig
   extraArgs: []
-
 # Networking of build containers (RUN steps and docker run). Each repository gets its own NAT network.
 network:
   # Split into one subnet per repository; must not overlap any network the node can reach
@@ -118,7 +109,6 @@ network:
       - 224.0.0.0/3
     # Exceptions to the block list, e.g. an internal package proxy
     allow: []
-
 # Resource requests and limits
 resources:
   limits:
@@ -127,22 +117,18 @@ resources:
   requests:
     cpu: 500m
     memory: 1Gi
-
 # Node selector for Windows nodes
 nodeSelector:
   kubernetes.io/os: windows
   kubernetes.io/arch: amd64
-
 # Tolerations for Windows nodes
 tolerations:
   - key: "os"
     operator: "Equal"
     value: "windows"
     effect: "NoSchedule"
-
 # Affinity for scheduling
 affinity: {}
-
 # TCP checks of the gateway port (connections without a TLS hello are not logged)
 livenessProbe:
   tcpSocket:
@@ -152,7 +138,6 @@ livenessProbe:
   timeoutSeconds: 10
   successThreshold: 1
   failureThreshold: 3
-
 readinessProbe:
   tcpSocket:
     port: docker-tls
@@ -161,19 +146,15 @@ readinessProbe:
   timeoutSeconds: 5
   successThreshold: 1
   failureThreshold: 3
-
 # Service account configuration
 serviceAccount:
   create: true
   annotations: {}
   name: ""
-
 # Pod annotations
 podAnnotations: {}
-
 # Pod labels
 podLabels: {}
-
 # Persistence for Docker data (images, containers, volumes, build cache)
 persistence:
   enabled: false
@@ -183,7 +164,6 @@ persistence:
   size: 64Gi
   # Must match docker.dataRoot
   mountPath: C:/docker-data
-
 # Windows firewall configuration (rules are created on the node at every start)
 firewall:
   enabled: true
