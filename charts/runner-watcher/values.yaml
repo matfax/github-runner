@@ -1,7 +1,7 @@
 image:
   repository: ghcr.io/matfax/github-runner/watcher
   pullPolicy: Always
-  tag: "latest"
+  tag: "latest@sha256:fdfea3abf8cfa30a06906d14d58221e80598ec701f7fabc718c9215e11ca8760"
 
 imagePullSecrets: []
 nameOverride: ""
@@ -68,7 +68,7 @@ runners:
     image:
       repository: ghcr.io/matfax/github-runner/runner
       pullPolicy: Always
-      tag: "ubuntu"
+      tag: "ubuntu@sha256:953ed03c04ffee35b45f37890dec9e8ffe55fadf701bae119b41c26057baf387"
     resources:
       requests:
         cpu: 500m
@@ -93,7 +93,7 @@ runners:
     image:
       repository: ghcr.io/matfax/github-runner/runner
       pullPolicy: IfNotPresent
-      tag: "windows"
+      tag: "windows@sha256:9b8951356cb90b28c665ebef6d28c764dc4c80b27e03f5cdcd1868943392119a"
     # Docker endpoint of the docker-dind chart on the same node ($(NODE_IP) is the node's IP)
     dockerHost: "tcp://$(NODE_IP):2375"
     # Schedule only onto nodes running a pod with these labels (the docker-dind chart). Set {} to disable.
