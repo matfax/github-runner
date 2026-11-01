@@ -54,12 +54,15 @@ jobs:
       - name: Create registration token
         id: token
         shell: bash
+        env:
+          REGISTRATION_PAT: ${{ secrets.REGISTRATION_PAT }}
+          REPO_FULL_NAME: ${{ github.repository }}
         run: |
-          if [ -z "${{ secrets.REGISTRATION_PAT }}" ]; then
+          if [ -z "$REGISTRATION_PAT" ]; then
             echo "REGISTRATION_PAT secret missing" >&2
             exit 1
           fi
-          token=$(pwsh -Command ". ./registration.ps1; New-RegistrationToken -PatToken '${{ secrets.REGISTRATION_PAT }}' -RepoFullName '${{ github.repository }}'")
+          token=$(pwsh -Command '. ./registration.ps1; New-RegistrationToken -PatToken $env:REGISTRATION_PAT -RepoFullName $env:REPO_FULL_NAME')
           echo "::add-mask::$token"
           if [ -z "$token" ]; then
             echo "Failed to create registration token" >&2
