@@ -253,10 +253,10 @@ jobs:
           EXISTING_DIGEST=$(docker buildx imagetools inspect "${{ env.DOCKER_REPO }}docker-dind:${{ env.DOCKER_TAG }}" --format '{{json .Manifest.Digest}}' 2>/dev/null | tr -d '"' || true)
           if [ -n "$EXISTING_DIGEST" ]; then
             echo "Existing digest: $EXISTING_DIGEST"
-            echo "digest=$EXISTING_DIGEST" >> $GITHUB_OUTPUT
+            echo "digest=$EXISTING_DIGEST" >> "$GITHUB_OUTPUT"
           else
             echo "No existing image found"
-            echo "digest=" >> $GITHUB_OUTPUT
+            echo "digest=" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Tag docker-dind image
@@ -274,7 +274,7 @@ jobs:
         run: |
           NEW_DIGEST=$(docker buildx imagetools inspect "${{ env.DOCKER_REPO }}docker-dind:${{ env.DOCKER_TAG }}" --format '{{json .Manifest.Digest}}' | tr -d '"')
           echo "New digest: $NEW_DIGEST"
-          echo "digest=$NEW_DIGEST" >> $GITHUB_OUTPUT
+          echo "digest=$NEW_DIGEST" >> "$GITHUB_OUTPUT"
           
           if [ "${{ steps.existing-digest.outputs.digest }}" != "$NEW_DIGEST" ]; then
             if [ -n "${{ steps.existing-digest.outputs.digest }}" ]; then
@@ -282,10 +282,10 @@ jobs:
             else
               echo "New image created"
             fi
-            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "changed=true" >> "$GITHUB_OUTPUT"
           else
             echo "Digest unchanged"
-            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "changed=false" >> "$GITHUB_OUTPUT"
           fi
 
   lint-charts:
@@ -314,7 +314,7 @@ jobs:
         uses: helm/chart-testing-action@6ec842c01de15ebb84c8627d2744a0c2f2755c9f # v2.8.0
 
       - name: Run chart linting
-        run: ct lint ${{ github.event != 'pull_request' && '--all' }}
+        run: ct lint ${{ github.event_name != 'pull_request' && '--all' || '' }}
 
   test-watcher:
     name: Test Runner Watcher
@@ -444,7 +444,7 @@ jobs:
           TARGET_VERSION: ${{ github.event.inputs['bump-docker-dind'] == 'true' && steps.release-version.outputs.nextStrict || steps.prerelease-version.outputs.new_version }}
         run: |
           yq eval -i ".version = \"${{ env.TARGET_VERSION }}\"" charts/docker-dind/Chart.yaml
-          echo "version=${{ env.TARGET_VERSION }}" >> $GITHUB_OUTPUT
+          echo "version=${{ env.TARGET_VERSION }}" >> "$GITHUB_OUTPUT"
           echo "Patched Chart.yaml to version ${{ env.TARGET_VERSION }}"
 
       - name: Create Temporary Branch
