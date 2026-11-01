@@ -347,7 +347,7 @@ jobs:
           check-latest: true
 
       - name: Set up chart testing
-        uses: step-security/chart-testing-action@877d2a5d4d9cb1af8a9d7fb79c7b2fd2e8d07e1f # v2.9.0
+        uses: helm/chart-testing-action@6ec842c01de15ebb84c8627d2744a0c2f2755c9f # v2.8.0
 
       - name: Run chart linting
         run: ct lint ${{ github.event_name != 'pull_request' && '--all' || '' }}
@@ -510,7 +510,7 @@ jobs:
             charts/docker-dind/*.yaml
 
       - name: Tag and Release Charts
-        uses: step-security/chart-releaser-action@2b48db14caa239f19dc7940b87eec9ef439abf33 # v1.7.0
+        uses: helm/chart-releaser-action@a917fd15b20e8b64b94d9158ad54cd6345335584 # v1.6.0
         with:
           charts_dir: charts
           config: cr.yaml
