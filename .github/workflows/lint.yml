@@ -1,0 +1,10 @@
+name: lint
+on: [push, pull_request]
+
+jobs:
+  actions:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: actionlint
+        uses: raven-actions/actionlint@v2
