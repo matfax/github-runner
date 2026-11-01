@@ -74,7 +74,7 @@ RUN Write-Host "Installing BuildKit v${BUILDKIT_GITHUB_VERSION}..."; `
 
 RUN "[Environment]::SetEnvironmentVariable('PATH', (Join-Path $env:ProgramFiles 'buildkit' 'bin') + [IO.Path]::PathSeparator + $env:PATH, [EnvironmentVariableTarget]::Machine)
 
-ARG CNI_GITHUB_VERSION=0.3.1 # repository: microsoft/windows-container-networking
+ARG CNI_GITHUB_VERSION=0.3.3 # repository: microsoft/windows-container-networking
 
 # Install CNI plugins
 ADD https://github.com/microsoft/windows-container-networking/releases/download/v${CNI_GITHUB_VERSION}/windows-container-networking-cni-amd64-v${CNI_GITHUB_VERSION}.zip C:/cni-plugins.zip
