@@ -11,7 +11,7 @@ LABEL org.opencontainers.image.base.name="ubuntu:24.04"
 ARG TARGETARCH
 ARG POWERSHELL_GITHUB_VERSION=7.6.8
 # repository: PowerShell/PowerShell
-ARG KUBECTL_GITHUB_VERSION=1.37.1
+ARG KUBECTL_GITHUB_VERSION=1.37.2
 # repository: kubernetes/kubernetes
 ARG POWERSHELL_YAML_VERSION=0.4.12
 
