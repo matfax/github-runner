@@ -9,7 +9,7 @@ LABEL org.opencontainers.image.description="Launches ephemeral GitHub Actions ru
 LABEL org.opencontainers.image.base.name="ubuntu:24.04"
 
 ARG TARGETARCH
-ARG POWERSHELL_GITHUB_VERSION=7.6.8
+ARG POWERSHELL_GITHUB_VERSION=7.6.9
 # repository: PowerShell/PowerShell
 ARG KUBECTL_GITHUB_VERSION=1.37.1
 # repository: kubernetes/kubernetes
