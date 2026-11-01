@@ -62,7 +62,7 @@ jobs:
             echo "REGISTRATION_PAT secret missing" >&2
             exit 1
           fi
-          token=$(pwsh -Command '. ./registration.ps1; New-RegistrationToken -PatToken $env:REGISTRATION_PAT -RepoFullName $env:REPO_FULL_NAME')
+          token=$(pwsh -Command ". ./registration.ps1; New-RegistrationToken -PatToken \$env:REGISTRATION_PAT -RepoFullName \$env:REPO_FULL_NAME")
           echo "::add-mask::$token"
           if [ -z "$token" ]; then
             echo "Failed to create registration token" >&2
