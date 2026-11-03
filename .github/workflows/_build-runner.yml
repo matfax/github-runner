@@ -46,6 +46,9 @@ env:
   DOCKER_REPO: ghcr.io/${{ github.repository }}/
   DOCKER_RELEASE_PREFIX_OPT: ${{ github.event_name == 'release' && github.event.release.tag_name || '' }}${{ github.event_name == 'release' && '-' || '' }}
 
+permissions:
+  contents: read
+
 jobs:
   build:
     name: Build and Test Runner (${{ inputs.context }})
@@ -60,7 +63,12 @@ jobs:
       GHA_CACHE_SCOPE: ${{ inputs.registry }}-${{ inputs.platform }}
       REGISTRY_REF: registry,ref=ghcr.io/${{ github.repository }}/${{ inputs.registry }}:buildcache-${{ inputs.platform }}
     steps:
-      - name: Checkout
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        with:
+          egress-policy: audit
+
+      - name: Checkout Repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Login to GHCR

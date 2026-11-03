@@ -32,6 +32,9 @@ env:
   DOCKER_REPO: ghcr.io/${{ github.repository }}/
   DOCKER_RELEASE_PREFIX_OPT: ${{ github.event_name == 'release' && github.event.release.tag_name || '' }}${{ github.event_name == 'release' && '-' || '' }}
 
+permissions:
+  contents: read
+
 jobs:
   registration-token:
     name: Create Registration Token
@@ -42,16 +45,24 @@ jobs:
     outputs:
       reg_token: ${{ steps.encoded-reg-token.outputs.out }}
     steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        with:
+          egress-policy: audit
+
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Create registration token
         id: token
         shell: bash
+        env:
+          REGISTRATION_PAT: ${{ secrets.REGISTRATION_PAT }}
+          REPO_FULL_NAME: ${{ github.repository }}
         run: |
-          if [ -z "${{ secrets.REGISTRATION_PAT }}" ]; then
+          if [ -z "$REGISTRATION_PAT" ]; then
             echo "REGISTRATION_PAT secret missing" >&2
             exit 1
           fi
-          token=$(pwsh -Command ". ./registration.ps1; New-RegistrationToken -PatToken '${{ secrets.REGISTRATION_PAT }}' -RepoFullName '${{ github.repository }}'")
+          token=$(pwsh -Command ". ./registration.ps1; New-RegistrationToken -PatToken \$env:REGISTRATION_PAT -RepoFullName \$env:REPO_FULL_NAME")
           echo "::add-mask::$token"
           if [ -z "$token" ]; then
             echo "Failed to create registration token" >&2
@@ -162,6 +173,11 @@ jobs:
     permissions:
       actions: write
     steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        with:
+          egress-policy: audit
+
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -187,6 +203,11 @@ jobs:
       - run-${{ github.run_id }}
     timeout-minutes: 5
     steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        with:
+          egress-policy: audit
+
       - run: echo "Self-hosted runner alive on ${{ matrix.platform }}"
 
   merge:
@@ -200,6 +221,11 @@ jobs:
     env:
       DOCKER_TAG: ${{ github.event_name == 'release' && github.event.release.tag_name || 'latest' }}
     steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        with:
+          egress-policy: audit
+
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Login to GHCR
@@ -233,7 +259,10 @@ jobs:
       docker_dind_digest: ${{ steps.get-digest.outputs.digest }}
       docker_dind_digest_changed: ${{ steps.get-digest.outputs.changed }}
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        with:
+          egress-policy: audit
 
       - name: Login to GHCR
         uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
@@ -244,6 +273,9 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: Set up Docker Buildx
+        uses: step-security/setup-buildx-action@e50058a0fcd8d1a7d626c905502d010a468bf238 # v4.4.1
 
       - name: Check existing digest
         id: existing-digest
@@ -295,13 +327,18 @@ jobs:
     permissions:
       contents: read
     steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        with:
+          egress-policy: audit
+
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
 
       - name: Set up Helm
-        uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+        uses: step-security/setup-helm@104176d810f424da7451a3fe25620d40c4dfb883 # v5.0.1
         with:
           version: v3.22.1
 
@@ -322,11 +359,16 @@ jobs:
     permissions:
       contents: read
     steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        with:
+          egress-policy: audit
+
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Helm
-        uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+        uses: step-security/setup-helm@104176d810f424da7451a3fe25620d40c4dfb883 # v5.0.1
         with:
           version: v3.22.1
 
@@ -352,6 +394,11 @@ jobs:
       CR_KEYRING: ${{ vars.CR_KEYDIR }}/secring.gpg
       TEMP_BRANCH_REF: refs/heads/tmp/docker-dind-${{ github.run_id }}
     steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        with:
+          egress-policy: audit
+
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -363,12 +410,12 @@ jobs:
           git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
 
       - name: Set up Helm
-        uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+        uses: step-security/setup-helm@104176d810f424da7451a3fe25620d40c4dfb883 # v5.0.1
         with:
           version: v3.22.1
 
       - name: Load Secrets
-        uses: 1password/load-secrets-action@13f58eec611f8e5db52ec16247f58c508398f3e6 # v3.0.0
+        uses: step-security/load-secrets-action@4c489dc40fc6a7e9513c6dcf4a73aaf1c67139da # v5.0.1
         id: load-secrets
         env:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
@@ -421,7 +468,7 @@ jobs:
       - name: Determine Release Version
         id: release-version
         if: github.event.inputs['bump-docker-dind'] == 'true'
-        uses: ietf-tools/semver-action@c90370b2958652d71c06a3484129a4d423a6d8a8 # v1.11.0
+        uses: step-security/semver-action@cdfef12f38a611b3c4ffc04f7c8018aa98ce5beb # v1.11.0
         with:
           token: ${{ github.token }}
           prefix: docker-dind-
@@ -498,6 +545,11 @@ jobs:
     permissions:
       contents: none
     steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        with:
+          egress-policy: audit
+
       - name: Check dependent job results
         shell: bash
         run: |
@@ -541,6 +593,11 @@ jobs:
       contents: read
     environment: registration
     steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        with:
+          egress-policy: audit
+
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Delete self-hosted runners for this run
         shell: pwsh
