@@ -274,9 +274,6 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
-      - name: Set up Docker Buildx
-        uses: step-security/setup-buildx-action@e50058a0fcd8d1a7d626c905502d010a468bf238 # v4.4.1
-
       - name: Check existing digest
         id: existing-digest
         env:
@@ -338,7 +335,7 @@ jobs:
           fetch-depth: 0
 
       - name: Set up Helm
-        uses: step-security/setup-helm@104176d810f424da7451a3fe25620d40c4dfb883 # v5.0.1
+        uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
         with:
           version: v3.22.1
 
@@ -368,7 +365,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Helm
-        uses: step-security/setup-helm@104176d810f424da7451a3fe25620d40c4dfb883 # v5.0.1
+        uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
         with:
           version: v3.22.1
 
@@ -410,12 +407,12 @@ jobs:
           git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
 
       - name: Set up Helm
-        uses: step-security/setup-helm@104176d810f424da7451a3fe25620d40c4dfb883 # v5.0.1
+        uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
         with:
           version: v3.22.1
 
       - name: Load Secrets
-        uses: step-security/load-secrets-action@4c489dc40fc6a7e9513c6dcf4a73aaf1c67139da # v5.0.1
+        uses: 1password/load-secrets-action@13f58eec611f8e5db52ec16247f58c508398f3e6 # v3.0.0
         id: load-secrets
         env:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
@@ -468,7 +465,7 @@ jobs:
       - name: Determine Release Version
         id: release-version
         if: github.event.inputs['bump-docker-dind'] == 'true'
-        uses: step-security/semver-action@cdfef12f38a611b3c4ffc04f7c8018aa98ce5beb # v1.11.0
+        uses: ietf-tools/semver-action@c90370b2958652d71c06a3484129a4d423a6d8a8 # v1.11.0
         with:
           token: ${{ github.token }}
           prefix: docker-dind-
