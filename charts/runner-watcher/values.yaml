@@ -1,7 +1,7 @@
 image:
   repository: ghcr.io/matfax/github-runner/watcher
   pullPolicy: Always
-  tag: "latest@sha256:bfcc21a2aa94f7a64fffe7ebe2d24af74fb455a283628dc7e90b144cfa3d9a27"
+  tag: "latest@sha256:914a645c9f7bc40ec01fe30e37a15b60b770267754d091c95bc5e23228021627"
 
 imagePullSecrets: []
 nameOverride: ""
@@ -68,7 +68,7 @@ runners:
     image:
       repository: ghcr.io/matfax/github-runner/runner
       pullPolicy: Always
-      tag: "ubuntu@sha256:1a517c24d22ff43cd95e730792b0d63c5bfda2fc0689f0e4bec2f72b6a07fcb4"
+      tag: "ubuntu@sha256:7d64897e9ed937dd798d2c5000bc9007d3915b4e616743495ae43d643c701db2"
     resources:
       requests:
         cpu: 500m
@@ -93,7 +93,7 @@ runners:
     image:
       repository: ghcr.io/matfax/github-runner/runner
       pullPolicy: IfNotPresent
-      tag: "windows@sha256:9b8951356cb90b28c665ebef6d28c764dc4c80b27e03f5cdcd1868943392119a"
+      tag: "windows@sha256:1a3e1ea6220ca10f724b6c5857c68edffca409e23119afa8ad429d766af24627"
     # Docker endpoint of the docker-dind chart on the same node ($(NODE_IP) is the node's IP)
     dockerHost: "tcp://$(NODE_IP):2375"
     # Schedule only onto nodes running a pod with these labels (the docker-dind chart). Set {} to disable.
@@ -117,7 +117,7 @@ cache:
   image:
     repository: ghcr.io/falcondev-oss/github-actions-cache-server
     pullPolicy: IfNotPresent
-    tag: "latest@sha256:41530ac4215fddcc0bdfd87b5069f40a226572b1325885f02e9173068cdc1872"
+    tag: "latest@sha256:05c4d9e7169f525f2b74d412c4a081aeec5446a017ec88bae668e63ebfb16aa9"
   cleanupOlderThanDays: 30
   service:
     port: 3000
