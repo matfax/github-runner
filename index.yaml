@@ -3,6 +3,27 @@ entries:
   docker-dind:
   - apiVersion: v2
     appVersion: 28.3.1
+    created: "2026-11-09T05:00:03.610995449Z"
+    description: Per-repository Windows Docker daemons behind a mutual-TLS endpoint
+    digest: ce09b65009a89fec6e62e0f0f859b21f3968b52bd6e7cc40eb792409f50c4014
+    home: https://github.com/matfax/github-runner
+    keywords:
+    - docker
+    - dind
+    - windows
+    - tls
+    maintainers:
+    - email: mat@fax.fyi
+      name: matfax
+    name: docker-dind
+    sources:
+    - https://github.com/matfax/github-runner/tree/main/docker-dind
+    type: application
+    urls:
+    - https://github.com/matfax/github-runner/releases/download/docker-dind-0.4.2-dev.282/docker-dind-0.4.2-dev.282.tgz
+    version: 0.4.2-dev.282
+  - apiVersion: v2
+    appVersion: 28.3.1
     created: "2026-11-08T04:59:04.847482956Z"
     description: Per-repository Windows Docker daemons behind a mutual-TLS endpoint
     digest: 34ecf1d22e55ec8b347fe7894c2dcdb23071d54b94fb07efa6b0bf8af1825fb7
@@ -5968,4 +5989,4 @@ entries:
     urls:
     - https://github.com/matfax/github-runner/releases/download/runner-watcher-0.1.0/runner-watcher-0.1.0.tgz
     version: 0.1.0
-generated: "2026-11-08T04:59:04.984612297Z"
+generated: "2026-11-09T05:00:03.970096214Z"
