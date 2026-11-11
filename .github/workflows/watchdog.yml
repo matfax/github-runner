@@ -10,6 +10,9 @@ concurrency:
   group: watchdog-${{ github.workflow_sha }}-${{ github.event.workflow_run.run_number }}
   cancel-in-progress: false
 
+permissions:
+  contents: read
+
 jobs:
   wait:
     name: Wait for Build
@@ -19,6 +22,11 @@ jobs:
     outputs:
       conclusion: ${{ steps.wait-for-job.outputs.conclusion }}
     steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+
       - uses: beacon-biosignals/wait-for-job@38927c8e9d02205ebecd13e7787dde41e9731673 # v1.0.0
         id: wait-for-job
         with:
@@ -37,6 +45,11 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Check for stuck jobs
         id: check
