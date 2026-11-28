@@ -1,5 +1,5 @@
 # Watcher that polls GitHub for queued self-hosted jobs and launches runner Jobs in Kubernetes.
-FROM ubuntu:24.04@sha256:68ee22004a9109b44973313b02ff7b1de250f1de0f5ecb628d73f579aaff33ac
+FROM ubuntu:24.04@sha256:562111b88caa79c71391c0c4d3c2114a7d5c35915c20561fd893cb1e07929e6b
 
 LABEL org.opencontainers.image.source="https://github.com/matfax/github-runner"
 LABEL org.opencontainers.image.vendor="matfax"
